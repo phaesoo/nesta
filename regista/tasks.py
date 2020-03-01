@@ -1,10 +1,14 @@
 from celery import Celery
 import time
 
-app = Celery("tasks", backend="rpc://", broker="pyamqp://guest:guest@localhost//")
+app = Celery("tasks", backend="rpc://", broker="amqp://prod:12345@ec2-3-87-14-67.compute-1.amazonaws.com//")
 
 
 @app.task
 def add(x, y):
-    time.sleep(100)
+    return x + y
+
+@app.task
+def sleep_and_add(x, y):
+    time.sleep(1000)
     return x + y

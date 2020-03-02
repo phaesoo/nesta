@@ -10,7 +10,6 @@ class Server:
         while True:
             pass
 
-    
     def send_task(self):
         """
         Send task queue to celery broker

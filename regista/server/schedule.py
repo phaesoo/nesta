@@ -23,6 +23,11 @@ class Schedule:
             session.rollback()
 
     def __dump(self, session):
+        """
+        dump job_schedule > job_schedule_hist
+        empty job_schedule
+        """
+        # dump job_schedule > job_schedule_hist
         job_schedules = session.query(JobSchedule).all()
 
         objects = list()
@@ -37,7 +42,13 @@ class Schedule:
             ))
         session.bulk_save_objects(objects)
 
+        # empty job_schedule
+        session.query(JobSchedule).delete()
+
     def __insert(self, session, date):
+        """
+        insert job_schedule table with job table 
+        """
         jobs = session.query(Job).all()
 
         target_dt = datetime(int(date[:4]), int(date[4:6]), int(date[6:8]))

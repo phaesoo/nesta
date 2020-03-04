@@ -9,7 +9,7 @@ class BaseControl(ABC):
         if not len(argv):
             raise ValueError("Empty sys.argv[1:]")
 
-        self.__argv = argv[1:]
+        self._argv = argv[1:]
         self._parser = ArgumentParser(description=f"Regista controller[{title}]")
 
     @abstractmethod
@@ -22,4 +22,4 @@ class BaseControl(ABC):
 
     def main(self):
         self._init_parser()
-        self._main(self._parser.parse_args(self.__argv))
+        self._main(self._parser.parse_args(self._argv))

@@ -4,6 +4,7 @@ from .controls import *
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser
     argv = sys.argv[1:]
     if not len(argv):
         raise ValueError("Empty sys.argv[1:]")

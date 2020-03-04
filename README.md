@@ -12,3 +12,13 @@
 - [x] Remote task call with Celery
 - [x] Terminate running task with Celery (revoke, terminate=True)
 - [x] Worker heartbeat, app.control.ping()
+
+# Server
+
+- Send task
+- Update result
+
+
+Undecided
+
+- Worker heartbeat(ping)

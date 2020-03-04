@@ -15,14 +15,14 @@ class Schedule:
     def insert(self, date):
         session = get_session("prod")
         try:
-            self.__dump(session)
-            self.__insert(session, date)
+            self._dump(session)
+            self._insert(session, date)
             session.commit()
         except Exception as e:
             logger.error(e)
             session.rollback()
 
-    def __dump(self, session):
+    def _dump(self, session):
         """
         dump job_schedule > job_schedule_hist
         empty job_schedule
@@ -45,7 +45,7 @@ class Schedule:
         # empty job_schedule
         session.query(JobSchedule).delete()
 
-    def __insert(self, session, date):
+    def _insert(self, session, date):
         """
         insert job_schedule table with job table 
         """

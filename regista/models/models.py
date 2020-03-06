@@ -60,6 +60,8 @@ class JobSchedule(Base):
     job_id = Column(Integer, ForeignKey("job.id"), nullable=False)
     job = relationship("Job", back_populates="job_schedule")
 
+    def __repr__(self):
+        return f"<job_id>: {self.job_id}"
 
 class JobScheduleHist(Base):
     """

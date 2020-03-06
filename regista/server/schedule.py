@@ -1,7 +1,7 @@
 import logging
 from croniter import croniter
 from datetime import datetime, timedelta
-from regista.db.database import get_session
+from regista.server.db.database import get_session
 from regista.models.models import Job, JobSchedule, JobScheduleHist
 
 
@@ -23,8 +23,6 @@ class Schedule:
             session.rollback()
 
     def get_assignable_jobs(self):
-        
-
         pass
 
     def _dump(self, session):

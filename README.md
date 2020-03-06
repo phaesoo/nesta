@@ -18,6 +18,9 @@
 - Send task
 - Update result
 
+# DB
+
+- It better not to use ORM but SQL..
 
 Undecided
 

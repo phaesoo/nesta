@@ -2,7 +2,7 @@ import os
 import sys
 from croniter import croniter
 from datetime import datetime
-from regista.db.database import init_db, get_session
+from regista.server.db.database import init_db, get_session
 from regista.models.models import Job
 from regista.server.schedule import Schedule
 from regista.utils.log import init_logger

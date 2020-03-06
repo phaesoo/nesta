@@ -22,6 +22,11 @@ class Schedule:
             logger.error(e)
             session.rollback()
 
+    def get_assignable_jobs(self):
+        
+
+        pass
+
     def _dump(self, session):
         """
         dump job_schedule > job_schedule_hist

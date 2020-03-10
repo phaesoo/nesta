@@ -30,7 +30,8 @@ class Schedule:
             """
             SELECT a.jid, a.job_name from job a join job_schedule b on a.jid = b.jid
             WHERE (scheduled_time IS NULL or scheduled_time < NOW())
-            AND a.jid NOT IN (SELECT DISTINCT a.jid FROM job_dependency a JOIN job_schedule b ON a.jid = b.jid WHERE job_status<>99)
+            AND b.job_status<>99
+            AND a.jid NOT IN (SELECT DISTINCT a.jid FROM job_dependency a JOIN job_schedule b ON a.dependent_jid = b.jid WHERE job_status<>99)
             """
         )
         return data

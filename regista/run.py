@@ -12,6 +12,6 @@ if __name__ == "__main__":
     init_logger("run")
 
     schedule = Schedule()
-    #schedule.insert("20200302")
+    schedule.insert("20200302")
     assignable_jobs = schedule.get_assignable_jobs()
     print (assignable_jobs)

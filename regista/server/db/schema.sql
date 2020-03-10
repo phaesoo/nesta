@@ -20,7 +20,8 @@ CREATE TABLE job_schedule (
     start_time DATETIME DEFAULT NULL,
     end_time DATETIME DEFAULT NULL,
     run_count INT DEFAULT 0,
-    max_run_count INT
+    max_run_count INT,
+    task_id CHAR(36) DEFAULT NULL
 );
 
 

@@ -1,9 +1,13 @@
 import time
 import pickle
 import logging
-from .handler import *
 from .define import define
+from .schedule import Schedule
+from regista.tasks.tasks import app, script
 from regista.utils.queue import SQSClient
+from regista.configs import debug
+from regista.utils.mysql import MySQLClient
+from regista.utils.log import init_logger
 
 
 MAIN_QUEUE_URl="https://sqs.ap-northeast-2.amazonaws.com/924873670641/regista_server"
@@ -13,7 +17,6 @@ SERVER_QUEUE="server"
 HANDLER_QUEUE="handler"
 
 
-logger = logging.getLogger()
 
 
 class Server:
@@ -72,9 +75,71 @@ class Server:
             time.sleep(1)
 
     def send_task(self):
+        logger = logging.getLogger("run")
+
         """
         Send task queue to celery broker
         """
+        schedule = Schedule()
+
+        conn = MySQLClient()
+        conn.init(**debug.MYSQL_CONFIG)
 
         while True:
-            pass
+            # get finished jobs
+            data = conn.fetchall(
+                """
+                SELECT task_id, jid from job_schedule where task_id IS NOT NULL;
+                """
+            )
+            
+            # update job_status and task_id=NULL
+            try:
+                for row in data:
+                    result = app.AsyncResult(row[0])
+                    if result.ready():
+                        result_code = result.get()
+                        print (result_code)
+                        if result_code == 0:
+                            result_code = 99
+                        else:
+                            result_code = -result_code
+                        conn.execute(
+                            f"""
+                            update job_schedule set job_status={result_code}, task_id=NULL where jid={row[1]};
+                            """
+                        )
+                conn.commit()
+            except Exception as e:
+                print (e)
+                conn.rollback()
+
+            time.sleep(10)
+            # assign jobs
+            jobs = schedule.get_assignable_jobs()
+            print (jobs)
+            try:
+                for row in jobs:
+                    logger.info(f"assign job: {row[1]}")
+                    task_id = script.delay(row[1])
+                    conn.execute(
+                        f"""
+                        update job_schedule set job_status=1, task_id='{task_id}', run_count=run_count+1 where jid={row[0]};
+                        """
+                    )
+                conn.commit()
+            except Exception as e:
+                print (e)
+                conn.rollback()
+            
+            logger.info("Sleep 5 secs...")
+            time.sleep(5)
+
+
+if __name__ == "__main__":
+    print ("start")
+    init_logger("run")
+    server = Server("debug")
+    server.send_task()
+
+            

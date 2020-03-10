@@ -7,4 +7,4 @@ cd ..
 
 source .venv/bin/activate
 
-celery -A regista.tasks worker --loglevel=info 
+celery -A regista.tasks.tasks worker --loglevel=info 

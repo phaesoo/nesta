@@ -2,79 +2,88 @@ import MySQLdb
 import pandas.io.sql as psql
 
 
+class MySQLClientError(Exception):
+    pass
+
 class MySQLClient:
-    def __init__(self, host, port, dbname, user, password):
-        self._conn = MySQLdb.connect(
+    def __init__(self, autocommit=False):
+        self._conn = None
+        self._cursor = None
+        self._autocommit = None
+
+    def __del__(self):
+        try:
+            self._cursor.close()
+            self._conn.close()
+        except:
+            pass
+
+    def init(self, host, port, db, user, password):
+        assert isinstance(host, str)
+        assert isinstance(port, int)
+        assert isinstance(db, str)
+        assert isinstance(user, str)
+        assert isinstance(password, str)
+
+        self._config = dict(
             host=host,
             port=port,
-            db=dbname,
+            db=db,
             user=user,
             passwd=password
         )
+
+    def _init_connection(self):
+        self._conn = MySQLdb.connect(**self._config)
+        if self._autocommit:
+            self._conn.autocommit(True)
         self._cursor = self._conn.cursor()
 
-    def __del__(self):
-        self._cursor.close()
-        self._conn.close()
+    def _check_init(self):
+        if self._config is None:
+            raise MySQLClientError("Client has not been initialized: init()")
+
+    def commit(self):
+        self._check_init()
+        if self._conn is None:
+            self._init_connection()
+        self._conn.commit()
+
+    def rollback(self):
+        self._check_init()
+        if self._conn is None:
+            self._init_connection()
+        self._conn.rollback()
 
     def read_sql(self, sql, **kwargs):
+        self._check_init()
         if self._conn is None:
-            self.__init__()
-
-        try:
-            result = psql.read_sql(sql, **kwargs)
-        except:
-            self._conn.rollback()
-            raise
-        else:
-            self._conn.commit()
-            return result
+            self._init_connection()
+        return psql.read_sql(sql, **kwargs)
 
     def execute(self, sql, parameter=None):
+        self._check_init()
         if self._conn is None:
-            self.__init__()
-
-        try:
-            self._cursor.execute(sql, parameter)
-        except:
-            self._conn.rollback()
-            raise
-        else:
-            self._conn.commit()
+            self._init_connection()
+        self._cursor.execute(sql, parameter)
 
     def executemany(self, sql, parameter=None):
+        self._check_init()
         if self._conn is None:
-            self.__init__()
-
-        try:
-            self._cursor.executemany(sql, parameter)
-        except:
-            self._conn.rollback()
-            raise
-        else:
-            self._conn.commit()
+            self._init_connection()
+        self._cursor.executemany(sql, parameter)
 
     def fetchone(self, sql, parameter=None):
+        self._check_init()
         if self._conn is None:
-            self.__init__()
+            self._init_connection()
 
-        try:
-            self._cursor.execute(sql, parameter)
-        except:
-            self._conn.rollback()
-            raise
-        else:
-            self._conn.commit()
-            return self._cursor.fetchone()
+        self._cursor.execute(sql, parameter)
+        return self._cursor.fetchone()
 
     def fetchall(self, sql, parameter=None):
+        self._check_init()
         if self._conn is None:
-            self.__init__()
-        try:
-            self._cursor.execute(sql, parameter)
-        except:
-            self._conn.rollback()
-            raise
-        else:
-            self._conn.commit()
-            return self._cursor.fetchall()
+            self._init_connection()
+        self._cursor.execute(sql, parameter)
+        return self._cursor.fetchall()

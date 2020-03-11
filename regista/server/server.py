@@ -17,8 +17,6 @@ SERVER_QUEUE="server"
 HANDLER_QUEUE="handler"
 
 
-
-
 class Server:
     def __init__(self, mode):
         self._mode = mode
@@ -146,5 +144,3 @@ if __name__ == "__main__":
     init_logger("run")
     server = Server("debug")
     server.send_task()
-
-            

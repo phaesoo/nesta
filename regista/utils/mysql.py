@@ -5,6 +5,7 @@ import pandas.io.sql as psql
 class MySQLClientError(Exception):
     pass
 
+
 class MySQLClient:
     def __init__(self, autocommit=False):
         self._conn = None
@@ -44,6 +45,7 @@ class MySQLClient:
             raise MySQLClientError("Client has not been initialized: init()")
 
     def commit(self):
+        print ("commit")
         self._check_init()
         if self._conn is None:
             self._init_connection()

@@ -80,10 +80,10 @@ class Server:
         """
         Send task queue to celery broker
         """
-        schedule = Schedule()
 
         conn = MySQLClient()
         conn.init(**debug.MYSQL_CONFIG)
+        schedule = Schedule(conn)
 
         while True:
             # get finished jobs
@@ -97,13 +97,19 @@ class Server:
             try:
                 for row in data:
                     result = app.AsyncResult(row[0])
-                    if result.ready():
+                    if result.state == "PENDING":
+                        conn.execute(
+                            f"""
+                            update job_schedule set job_status=-999, task_id=NULL where jid={row[1]};
+                            """
+                        )
+                    elif result.ready():
                         result_code = result.get()
-                        print (result_code)
                         if result_code == 0:
                             result_code = 99
                         else:
                             result_code = -result_code
+                        print (result_code)
                         conn.execute(
                             f"""
                             update job_schedule set job_status={result_code}, task_id=NULL where jid={row[1]};
@@ -114,7 +120,6 @@ class Server:
                 print (e)
                 conn.rollback()
 
-            time.sleep(10)
             # assign jobs
             jobs = schedule.get_assignable_jobs()
             print (jobs)

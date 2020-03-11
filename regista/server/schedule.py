@@ -4,16 +4,14 @@ from datetime import datetime, timedelta
 
 from regista.configs import debug
 from regista.models.models import Job, JobSchedule, JobScheduleHist
-from regista.utils.mysql import MySQLClient
 
 
 logger = logging.getLogger("run")
 
 
 class Schedule:
-    def __init__(self):
-        self._conn = MySQLClient()
-        self._conn.init(**debug.MYSQL_CONFIG)
+    def __init__(self, conn):
+        self._conn = conn
 
     def insert(self, date):
         try:
@@ -26,11 +24,13 @@ class Schedule:
             print ("rollback()")
 
     def get_assignable_jobs(self):
+        self._conn.commit()
         data = self._conn.fetchall(
             """
             SELECT a.jid, a.job_name from job a join job_schedule b on a.jid = b.jid
             WHERE (scheduled_time IS NULL or scheduled_time < NOW())
             AND b.job_status<>99
+            AND b.run_count < b.max_run_count
             AND a.jid NOT IN (SELECT DISTINCT a.jid FROM job_dependency a JOIN job_schedule b ON a.dependent_jid = b.jid WHERE job_status<>99)
             """
         )

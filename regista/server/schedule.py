@@ -3,7 +3,6 @@ from croniter import croniter
 from datetime import datetime, timedelta
 
 from regista.configs import debug
-from regista.models.models import Job, JobSchedule, JobScheduleHist
 
 
 logger = logging.getLogger("run")

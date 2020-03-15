@@ -1,13 +1,13 @@
 CELERY_BACKEND="rpc://"
-CELERY_BORKER="amqp://prod:12345@ec2-3-87-14-67.compute-1.amazonaws.com//"
+CELERY_BORKER="amqp://test:test@localhost/regista_worker"
 
 SERVER_QUEUE="server"
 
 
 MYSQL_CONFIG = {
-    "host": "ec2-3-87-14-67.compute-1.amazonaws.com",
+    "host": "localhost",
     "port": 3306,
-    "user": "hfcp",
-    "password": "haaforhaafor",
+    "user": "test",
+    "password": "test",
     "db": "regista",
 }

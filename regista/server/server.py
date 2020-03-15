@@ -4,34 +4,36 @@ import logging
 from .define import define
 from .schedule import Schedule
 from regista.tasks.tasks import app, script
-from regista.utils.queue import SQSClient
+from regista.utils.rabbitmq import RabbitMQClient
 from regista.configs import debug
 from regista.utils.mysql import MySQLClient
 from regista.utils.log import init_logger
 
 
-MAIN_QUEUE_URl="https://sqs.ap-northeast-2.amazonaws.com/924873670641/regista_server"
-SUB_QUEUE_URl="https://sqs.ap-northeast-2.amazonaws.com/924873670641/regista_server_sub"
-
-SERVER_QUEUE="server"
-HANDLER_QUEUE="handler"
-
-
 class Server:
     def __init__(self, mode):
         self._mode = mode
-        self._main_queue = SQSClient(MAIN_QUEUE_URl)
-        self._sub_queue = SQSClient(SUB_QUEUE_URl)
+        self._queue = RabbitMQClient()
+        self._queue.init(
+            host="localhost",
+            port=5672,
+            username="test",
+            password="test",
+            virtual_host="regista_server"
+        )
+        self._queue.queue_declare("server")
+        self._queue.queue_declare("handler")
+
+        self._is_run = False
 
     def run(self):
-        is_run = True
+        logger = logging.getLogger("run")
 
         while True:
             # main queue has high priority
-            result = self._main_queue.receive_message()
+            result = self._queue.get("server")
             if result:
                 data = result["data"]
-                receipt_handle = result["receipt_handle"]
 
                 cmd = data.get("command", None)
                 by = data.get("by", "undefined")
@@ -39,24 +41,23 @@ class Server:
                     logging.critical(f"Server is terminated by {by}")
                     break
                 elif cmd == "stop":
-                    is_run = False
+                    self._is_run = False
                     logging.info(f"Server is stopped by {by}")
                 elif cmd == "resume":
-                    is_run = True
+                    self._is_run = True
                     logging.info(f"Server is resumed by {by}")
                 else:
                     logging.info(f"Server is resumed by {by}")
                     pass
-
-                self._main_queue.delete_message(receipt_handle)
                 continue
             
-            if not is_run:
-                time.sleep(1)
+            if not self._is_run:
+                logger.warn("Server has been stopped. sleep 5 sec")
+                time.sleep(5)
                 continue
 
             # sub queue has lower priority
-            result = self._sub_queue.receive_message()
+            result = self._queue.get("handler")
             if result is None:
                 time.sleep(1)
                 continue
@@ -65,7 +66,7 @@ class Server:
             body = result["body"]
 
             if title == "result":
-                handler = ResultHandler()
+                pass
             else:
                 print (f"Unknown title: {title}")
                 continue
@@ -84,6 +85,11 @@ class Server:
         schedule = Schedule(conn)
 
         while True:
+            if self._is_run is False:
+                logger.warn("Server has been stopped. sleep 5 sec")
+                time.sleep(5)
+                continue
+
             # get finished jobs
             data = conn.fetchall(
                 """

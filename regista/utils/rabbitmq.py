@@ -9,17 +9,19 @@ class RabbitMQClient:
         self._channel = None
         self._config = None
 
-    def init(self, host, port, username, password):
+    def init(self, host, port, username, password, virtual_host):
         assert isinstance(host, str)
         assert isinstance(port, int)
         assert isinstance(username, str)
         assert isinstance(password, str)
+        assert isinstance(virtual_host, str)
 
         self._config = dict(
             host=host,
             port=port,
             username=username,
             password=password,
+            virtual_host=virtual_host,
         )
         self._init_connection()        
 
@@ -29,7 +31,8 @@ class RabbitMQClient:
                 host=self._config["host"],
                 port=self._config["port"],
                 credentials=pika.PlainCredentials(
-                    username=self._config["username"], password=self._config["password"])
+                    username=self._config["username"], password=self._config["password"]),
+                virtual_host=self._config["virtual_host"],
             )
         )
         self._channel = self._connection.channel()
@@ -53,14 +56,19 @@ class RabbitMQClient:
 
                 _, _, pickled = self._channel.basic_get(queue, auto_ack=True)
                 break
-            except:
+            except Exception as e:
+                print (e)
                 retry_count += 1
                 time.sleep(0.5)
                 continue
 
-        if pickled is None:
+        if retry_count  == 5:
             raise ValueError("Connection error with AMQP")
-        return pickle.loads(pickled)
+
+        if pickled is None:
+            return None
+        else:
+            return pickle.loads(pickled)
 
     def publish(self, queue, data):
         assert isinstance(data, dict)

@@ -25,8 +25,8 @@ class ServerControl(BaseControl):
 
         queue.queue_declare("server")
 
-        queue.publish("server", pickle.dumps({
+        queue.publish("server", {
             "data": {
                 "command": option.command
             }
-        }))
+        })

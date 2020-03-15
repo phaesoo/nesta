@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from threading import Thread
 from .server import Server
 
 
@@ -12,3 +13,7 @@ if __name__ == "__main__":
 
     server = Server(option.mode)
     server.run()
+
+    t = Thread(target=server.send_task)
+    t.start()
+    t.join()

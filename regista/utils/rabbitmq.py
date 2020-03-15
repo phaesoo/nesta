@@ -45,6 +45,7 @@ class RabbitMQClient:
 
     def get(self, queue):
         assert isinstance(queue, str)
+        print (queue)
 
         retry_count = 0
         pickled = None
@@ -59,7 +60,7 @@ class RabbitMQClient:
             except Exception as e:
                 print (e)
                 retry_count += 1
-                time.sleep(0.5)
+                time.sleep(0.1)
                 continue
 
         if retry_count  == 5:

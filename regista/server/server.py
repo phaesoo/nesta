@@ -1,6 +1,7 @@
 import time
 import pickle
 import logging
+from threading import Thread
 from .define import define
 from .schedule import Schedule
 from regista.tasks.tasks import app, script
@@ -33,22 +34,22 @@ class Server:
             # main queue has high priority
             result = self._queue.get("server")
             if result:
+                logger.info(result)
                 data = result["data"]
 
                 cmd = data.get("command", None)
                 by = data.get("by", "undefined")
                 if cmd == "terminate":
-                    logging.critical(f"Server is terminated by {by}")
+                    logger.warn(f"Server is terminated by {by}")
                     break
                 elif cmd == "stop":
                     self._is_run = False
-                    logging.info(f"Server is stopped by {by}")
+                    logger.warn(f"Server is stopped by {by}")
                 elif cmd == "resume":
                     self._is_run = True
-                    logging.info(f"Server is resumed by {by}")
+                    logger.warn(f"Server is resumed by {by}")
                 else:
-                    logging.info(f"Server is resumed by {by}")
-                    pass
+                    logger.warn(f"Undefined server command {by}: {cmd}")
                 continue
             
             if not self._is_run:
@@ -60,7 +61,10 @@ class Server:
             result = self._queue.get("handler")
             if result is None:
                 time.sleep(1)
+                logger.warn("Empty handler. sleep 1 sec")
                 continue
+            else:
+                logger.info(f"result: {result}")
 
             title = result["title"]
             body = result["body"]
@@ -69,8 +73,8 @@ class Server:
                 pass
             else:
                 print (f"Unknown title: {title}")
-                continue
             
+            logger.info("final sleep")
             time.sleep(1)
 
     def send_task(self):
@@ -150,3 +154,9 @@ if __name__ == "__main__":
     init_logger("run")
     server = Server("debug")
     server.send_task()
+
+    t = Thread(target=server.send_task)
+    t.start()
+    t.join()
+
+    print("Sleep 5 secs...")

@@ -19,18 +19,18 @@ class MySQLClient:
         except:
             pass
 
-    def init(self, host, port, db, user, password):
+    def init(self, host, port, db, username, password, **kwargs):
         assert isinstance(host, str)
         assert isinstance(port, int)
         assert isinstance(db, str)
-        assert isinstance(user, str)
+        assert isinstance(username, str)
         assert isinstance(password, str)
 
         self._config = dict(
             host=host,
             port=port,
             db=db,
-            user=user,
+            user=username,
             passwd=password
         )
 

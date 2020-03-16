@@ -1,0 +1,23 @@
+services:
+  common:
+    rabbitmq:
+      host: localhost
+      port: 5672
+      username: test
+      password: test
+      virtual_host: regista_server
+      queues:
+        - server
+        - handler
+    mysql:
+      host: localhost
+      port: 3306
+      username: test
+      password: test
+      db: regista
+  server:
+    auto_start: false
+  worker:
+    celery:
+      backend: rpc://
+      broker: "amqp://test:test@localhost/regista_worker"

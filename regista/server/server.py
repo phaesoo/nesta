@@ -12,27 +12,29 @@ from regista.utils.log import init_logger
 
 
 class Server:
-    def __init__(self, mode):
-        self._mode = mode
-        self._queue = RabbitMQClient()
-        self._queue.init(
-            host="localhost",
-            port=5672,
-            username="test",
-            password="test",
-            virtual_host="regista_server"
-        )
-        self._queue.queue_declare("server")
-        self._queue.queue_declare("handler")
+    def __init__(self, configs):
+        assert isinstance(configs, dict)
 
-        self._is_run = False
+        self._config_common = configs["services"]["common"]
+        self._config_server = configs["services"]["server"]
+
+        self._is_run = self._config_server.get("auto_start", False)
 
     def run(self):
         logger = logging.getLogger("run")
 
+        mq_client = RabbitMQClient()
+        mq_client.init(**self._config_common["rabbitmq"])
+
+        queues = self._config_common["rabbitmq"]["queues"]
+        assert isinstance(queues, list)
+        assert len(queues) == 2
+        for queue in queues:
+            mq_client.queue_declare(queue)
+
         while True:
             # main queue has high priority
-            result = self._queue.get("server")
+            result = mq_client.get(queues[0])
             if result:
                 logger.info(result)
                 data = result["data"]
@@ -58,7 +60,7 @@ class Server:
                 continue
 
             # sub queue has lower priority
-            result = self._queue.get("handler")
+            result = mq_client.get(queues[1])
             if result is None:
                 time.sleep(1)
                 logger.warn("Empty handler. sleep 1 sec")
@@ -70,6 +72,19 @@ class Server:
             body = result["body"]
 
             if title == "result":
+
+if __name__ == "__main__":
+    print ("start")
+    init_logger("run")
+    server = Server("debug")
+    server.send_task()
+
+    t = Thread(target=server.send_task)
+    t.start()
+    t.join()
+
+    print("Sleep 5 secs...")
+
                 pass
             else:
                 print (f"Unknown title: {title}")
@@ -147,16 +162,3 @@ class Server:
             
             logger.info("Sleep 5 secs...")
             time.sleep(5)
-
-
-if __name__ == "__main__":
-    print ("start")
-    init_logger("run")
-    server = Server("debug")
-    server.send_task()
-
-    t = Thread(target=server.send_task)
-    t.start()
-    t.join()
-
-    print("Sleep 5 secs...")

@@ -9,7 +9,7 @@ class RabbitMQClient:
         self._channel = None
         self._config = None
 
-    def init(self, host, port, username, password, virtual_host):
+    def init(self, host, port, username, password, virtual_host, **kwargs):
         assert isinstance(host, str)
         assert isinstance(port, int)
         assert isinstance(username, str)

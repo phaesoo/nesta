@@ -7,4 +7,7 @@ cd ..
 
 source .venv/bin/activate
 
-python -m regista.control $@
+
+echo $@
+
+python -m regista.control --item=$1 --config_path=./regista/configs/debug.yml $@

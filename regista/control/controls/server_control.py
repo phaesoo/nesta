@@ -4,8 +4,8 @@ from regista.utils.rabbitmq import RabbitMQClient
 
 
 class ServerControl(BaseControl):
-    def __init__(self):
-        super(ServerControl, self).__init__("server")
+    def __init__(self, configs):
+        super(ServerControl, self).__init__("server", configs)
 
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")
@@ -14,18 +14,13 @@ class ServerControl(BaseControl):
         subparsers.add_parser("terminate")
 
     def _main(self, option):
-        queue = RabbitMQClient()
-        queue.init(
-            host="localhost",
-            port=5672,
-            username="test",
-            password="test",
-            virtual_host="regista_server"
-        )
+        configs = self._configs["services"]["common"]["rabbitmq"]
 
-        queue.queue_declare("server")
+        mq_client = RabbitMQClient()
+        mq_client.init(**configs)
 
-        queue.publish("server", {
+        mq_client.queue_declare(configs["queues"][0])
+        mq_client.publish("server", {
             "data": {
                 "command": option.command
             }

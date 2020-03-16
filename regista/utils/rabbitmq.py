@@ -43,6 +43,12 @@ class RabbitMQClient:
             raise ValueError("Not initialized")
         self._channel.queue_declare(queue=queue)
 
+    def queue_delete(self, queue):
+        assert isinstance(queue, str)
+        if self._channel is None:
+            raise ValueError("Not initialized")
+        self._channel.queue_delete(queue=queue)
+
     def get(self, queue):
         assert isinstance(queue, str)
         print (queue)

@@ -1,24 +1,30 @@
+import os
 import sys
-from argparse import ArgumentParser
+import yaml
+from argparse import ArgumentParser, REMAINDER
 from .controls import *
 
 
-if __name__ == "__main__":
-    parser = ArgumentParser
-    argv = sys.argv[1:]
-    if not len(argv):
-        raise ValueError("Empty sys.argv[1:]")
+def parse_arguments():
+    parser = ArgumentParser()
+    parser.add_argument("--item", dest="item", help="{schedule, server, worker}", required=True)
+    parser.add_argument("--config_path", dest="config_path", help="config path", required=True)
+    return parser.parse_args(sys.argv[1:3])
 
-    item = argv[0]
+
+if __name__ == "__main__":
+    option = parse_arguments()
+    assert os.path.exists(option.config_path)
 
     control = None
-    if item == "schedule":
-        control = ScheduleControl()
-    elif item == "server":
-        control = ServerControl()
-    elif item == "worker":
-        control = WorkerControl()
+    if option.item == "schedule":
+        control = ScheduleControl
+    elif option.item == "server":
+        control = ServerControl
+    elif option.item == "worker":
+        control = WorkerControl
     else:
-        raise ValueError(f"Undefined item: {item}")
+        raise ValueError(f"Undefined item: {option.item}")
 
-    control.main()
+    ctrl = control(configs=yaml.load(open(option.config_path), Loader=yaml.Loader))
+    ctrl.main()

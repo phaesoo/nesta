@@ -7,4 +7,4 @@ cd ..
 
 source .venv/bin/activate
 
-python -m regista.server
+python -m regista.server --config_path=./regista/configs/debug.yml

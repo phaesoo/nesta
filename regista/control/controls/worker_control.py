@@ -4,8 +4,8 @@ from .base_control import BaseControl
 
 
 class WorkerControl(BaseControl):
-    def __init__(self):
-        super(WorkerControl, self).__init__("schedule")
+    def __init__(self, configs):
+        super(WorkerControl, self).__init__("schedule", configs)
 
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")

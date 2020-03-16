@@ -4,13 +4,10 @@ from argparse import ArgumentParser
 
 
 class BaseControl(ABC):
-    def __init__(self, title):
-        argv = sys.argv[1:]
-        if not len(argv):
-            raise ValueError("Empty sys.argv[1:]")
-
-        self._argv = argv[1:]
+    def __init__(self, title, configs):
+        self._argv = sys.argv[4:]
         self._parser = ArgumentParser(description=f"Regista controller[{title}]")
+        self._configs = configs        
 
     @abstractmethod
     def _init_parser(self):

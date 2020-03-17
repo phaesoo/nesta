@@ -1,6 +1,7 @@
+import logging
+import socket
 import time
 import pickle
-import logging
 from threading import Thread
 from .define import define
 from .schedule import Schedule
@@ -8,6 +9,9 @@ from regista.tasks.tasks import app, script
 from regista.utils.rabbitmq import RabbitMQClient
 from regista.utils.mysql import MySQLClient
 from regista.utils.log import init_logger
+
+
+logger = logging.getLogger("server")
 
 
 class Server:
@@ -23,33 +27,44 @@ class Server:
         self._is_run = self._config_server.get("auto_start", False)
         self._is_exit = False
 
-    def run(self):
-        logger = logging.getLogger("run")
+    def health_check(self):
+        logger.info("Health check started")
 
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_socket.bind(("localhost", 9999))
+        server_socket.listen()
+
+        while True:
+            client_socket, addr = server_socket.accept()
+            logger.warn(client_socket.recv(1024).decode(), addr)
+            client_socket.sendall("hello".encode())
+
+        client_socket.close()
+        server_socket.close()
+
+    def run(self):
         mq_client = RabbitMQClient()
         mq_client.init(**self._config_common["rabbitmq"])
 
-        queues = self._config_common["rabbitmq"]["queues"]
-        assert isinstance(queues, list)
-        assert len(queues) == 2
-        for queue in queues:
-            # delete existing queue and declare before starting
-            mq_client.queue_delete(queue)
-            mq_client.queue_declare(queue)
+        queue = self._config_common["rabbitmq"]["queue"]
+        # purge and declare before starting
+        mq_client.queue_purge(queue)
+        mq_client.queue_declare(queue)
 
         while True:
             if self._is_exit:
                 break
 
             # main queue has high priority
-            result = mq_client.get(queues[0])
-            if result:
-                logger.info(result)
-                self._handle_queue(result["data"])
+            data = mq_client.get(queue)
+            if data:
+                logger.info(data)
+                self._handle_queue(data)
                 continue
             
             if not self._is_run:
-                logger.warn("Server has been stopped. sleep 5 sec")
+                logger.info("Server has been stopped. sleep 5 sec")
                 time.sleep(5)
                 continue
 
@@ -67,32 +82,32 @@ class Server:
             cmd = body.get("command", None)
             by = body.get("by", "undefined")
             if cmd == "terminate":
-                print(f"Server is terminated by {by}")
+                logger.warn(f"Server is terminated by {by}")
                 self._is_exit = True
             elif cmd == "stop":
                 self._is_run = False
-                print(f"Server is stopped by {by}")
+                logger.warn(f"Server is stopped by {by}")
             elif cmd == "resume":
                 self._is_run = True
-                print(f"Server is resumed by {by}")
+                logger.warn(f"Server is resumed by {by}")
             else:
-                print(f"Undefined {title} command {by}: {cmd}")
+                logger.warn(f"Undefined {title} command {by}: {cmd}")
         elif title == "schedule":
             cmd = body.get("command", None)
             if cmd == "insert":
                 schedule = Schedule(self._conn)
                 schedule.insert(20200314)
             else:
-                print(f"Undefined {title} command {by}: {cmd}")
+                logger.warn(f"Undefined {title} command {by}: {cmd}")
 
     def _assign_jobs(self):
         schedule = Schedule(self._conn)
         # assign jobs
         jobs = schedule.get_assignable_jobs()
-        print (jobs)
+        logger.info(jobs)
         try:
             for row in jobs:
-                print(f"assign job: {row[1]}")
+                logger.info(f"assign job: {row[1]}")
                 task_id = script.delay(row[1])
                 self._conn.execute(
                     f"""
@@ -101,11 +116,10 @@ class Server:
                 )
             self._conn.commit()
         except Exception as e:
-            print (e)
+            logger.warn(e)
             self._conn.rollback()
 
     def update_result(self):
-        logger = logging.getLogger("run")
         """
         Send task queue to celery broker
         """
@@ -142,7 +156,6 @@ class Server:
                             result_code = 99
                         else:
                             result_code = -result_code
-                        print (result_code)
                         self._conn.execute(
                             f"""
                             update job_schedule set job_status={result_code}, task_id=NULL where jid={row[1]};
@@ -150,7 +163,7 @@ class Server:
                         )
                 self._conn.commit()
             except Exception as e:
-                print (e)
+                logger.warn(e)
                 self._conn.rollback()
             
             logger.info("Sleep 5 secs...")

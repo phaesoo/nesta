@@ -7,12 +7,17 @@ class ScheduleControl(BaseControl):
 
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")
-        subparsers.add_parser("insert")
+        insert_parser = subparsers.add_parser("insert")
+        insert_parser.add_argument("--date", "-d", dest="date", type=int)
 
     def _main(self, option):
-        print (option.command)
+        body = {
+            "command": option.command
+        }
         if option.command == "insert":
-            pass
+            body["date"] = option.date
         else:
             raise ValueError(f"Undefined command: {option.command}")
+            
+        self._publish(body)
         

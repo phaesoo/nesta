@@ -6,9 +6,7 @@ services:
       username: test
       password: test
       virtual_host: regista_server
-      queues:
-        - server
-        - handler
+      queue: "server"
     mysql:
       host: localhost
       port: 3306

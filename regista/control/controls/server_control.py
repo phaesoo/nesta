@@ -14,14 +14,7 @@ class ServerControl(BaseControl):
         subparsers.add_parser("terminate")
 
     def _main(self, option):
-        configs = self._configs["services"]["common"]["rabbitmq"]
-
-        mq_client = RabbitMQClient()
-        mq_client.init(**configs)
-
-        mq_client.queue_declare(configs["queues"][0])
-        mq_client.publish("server", {
-            "data": {
-                "command": option.command
-            }
+        self._publish({
+            "command": option.command
         })
+        

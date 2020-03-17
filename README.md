@@ -14,6 +14,7 @@
 - [x] Worker heartbeat, app.control.ping()
 - [x] DB scheme (not with ORM, with mysql)
 - [x] queue with RabbitMQ
+- [ ] Server as a daemon
 
 # Server
 

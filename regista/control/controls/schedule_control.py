@@ -8,7 +8,7 @@ class ScheduleControl(BaseControl):
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")
         insert_parser = subparsers.add_parser("insert")
-        insert_parser.add_argument("--date", "-d", dest="date", type=int)
+        insert_parser.add_argument("--date", "-d", dest="date", type=str)
 
     def _main(self, option):
         body = {

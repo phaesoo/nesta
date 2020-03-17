@@ -2,95 +2,88 @@ import logging
 from croniter import croniter
 from datetime import datetime, timedelta
 
-from regista.configs import debug
+
+logger = logging.getLogger("server")
 
 
-logger = logging.getLogger("run")
-
-
-class Schedule:
-    def __init__(self, conn):
-        self._conn = conn
-
-    def insert(self, date):
-        try:
-            self._dump()
-            self._insert(date)
-            self._conn.commit()
-        except Exception as e:
-            logger.error(e)
-            self._conn.rollback()
-            print ("rollback()")
-
-    def get_assignable_jobs(self):
-        self._conn.commit()
-        data = self._conn.fetchall(
-            """
-            SELECT a.jid, a.job_name from job a join job_schedule b on a.jid = b.jid
-            WHERE (scheduled_time IS NULL or scheduled_time < NOW())
-            AND b.job_status<>99
-            AND b.run_count < b.max_run_count
-            AND a.jid NOT IN (SELECT DISTINCT a.jid FROM job_dependency a JOIN job_schedule b ON a.dependent_jid = b.jid WHERE job_status<>99)
-            """
-        )
-        return data
-
-    def _dump(self):
+def _dump_schedule_hist(conn):
+    """
+    dump job_schedule > job_schedule_hist
+    empty job_schedule
+    """
+    # dump job_schedule > job_schedule_hist
+    data = conn.fetchall(
         """
-        dump job_schedule > job_schedule_hist
-        empty job_schedule
+        SELECT jid, job_date, job_status, start_time, end_time, run_count
+        FROM job_schedule
         """
-        # dump job_schedule > job_schedule_hist
-        data = self._conn.fetchall(
-            """
-            SELECT jid, job_date, job_status, start_time, end_time, run_count
-            FROM job_schedule
-            """
-        )
+    )
 
-        self._conn.executemany(
-            """
-            INSERT INTO job_schedule_hist (jid, job_date, job_status, start_time, end_time, run_count)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """, data
-        )
-
-        self._conn.execute("DELETE FROM job_schedule")
-
-    def _insert(self, date):
+    conn.executemany(
         """
-        insert job_schedule table with job table 
+        INSERT INTO job_schedule_hist (jid, job_date, job_status, start_time, end_time, run_count)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """, data
+    )
+
+    conn.execute("DELETE FROM job_schedule")
+
+
+def _insert_schedule(conn, date):
+    """
+    insert job_schedule table with job table 
+    """
+    target_dt = datetime(int(date[:4]), int(date[4:6]), int(date[6:8]))
+    cutoff_dt = target_dt + timedelta(days=1)
+
+    data = conn.fetchall(
         """
-        target_dt = datetime(int(date[:4]), int(date[4:6]), int(date[6:8]))
-        cutoff_dt = target_dt + timedelta(days=1)
+        SELECT jid, job_name, cron, max_run_count
+        FROM job
+        """
+    )
 
-        data = self._conn.fetchall(
-            """
-            SELECT jid, job_name, cron, max_run_count
-            FROM job
-            """
-        )
+    values = list()
+    for row in data:
+        cron = row[2]
 
-        values = list()
-        for row in data:
-            cron = row[2]
+        scheduled_time = None
+        if cron:
+            scheduled_time = croniter(row[2], target_dt).get_next(datetime)
+            print (cutoff_dt, scheduled_time)
+            if cutoff_dt < scheduled_time:
+                logger.warn(
+                    f"Skip scheduled_time > cutoff: id: {row[0]} name: {row[1]}")
+                continue
+            
+        values.append((row[0], target_dt.date(), scheduled_time, row[3]))
 
-            scheduled_time = None
-            if cron:
-                scheduled_time = croniter(row[2], target_dt).get_next(datetime)
-                print (cutoff_dt, scheduled_time)
-                if cutoff_dt < scheduled_time:
-                    logger.info(
-                        f"Skip scheduled_time > cutoff: id: {row[0]} name: {row[1]}")
-                    continue
-                
-            values.append((row[0], target_dt.date(), scheduled_time, row[3]))
+    conn.executemany(
+        """
+        INSERT INTO job_schedule (jid, job_date, scheduled_time, max_run_count)
+        VALUES (%s, %s, %s, %s)
+        """, values
+    )
 
-        print (values)
-        self._conn.executemany(
-            """
-            INSERT INTO job_schedule (jid, job_date, scheduled_time, max_run_count)
-            VALUES (%s, %s, %s, %s)
-            """, values
-        )
 
+def insert_schedule(conn, date):
+    assert isinstance(date, str)
+    try:
+        _dump_schedule_hist(conn)
+        _insert_schedule(conn, date)
+        conn.commit()
+    except Exception as e:
+        logger.error(e)
+        conn.rollback()
+
+
+def get_assignable_jobs(conn):
+    return conn.fetchall(
+        """
+        SELECT a.jid, a.job_name from job a join job_schedule b on a.jid = b.jid
+        WHERE (scheduled_time IS NULL or scheduled_time < NOW())
+        AND b.job_status=0
+        AND b.run_count < b.max_run_count
+        AND a.jid NOT IN (SELECT DISTINCT a.jid FROM job_dependency a JOIN job_schedule b ON a.dependent_jid = b.jid WHERE job_status<>99)
+        """
+    )

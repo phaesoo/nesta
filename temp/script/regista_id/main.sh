@@ -1,2 +1,3 @@
 #!/bin/bash
-touch /home/hspark/output/regista_id
+
+touch /home/phaesoo/output/regista_id

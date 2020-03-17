@@ -12,6 +12,7 @@ def parse_arguments():
     parser.add_argument("--config_path", dest="config_path", type=str, help="conifg file path")
     return parser.parse_args()
 
+
 if __name__ == "__main__":
     init_logger("server")
 

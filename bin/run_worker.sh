@@ -7,4 +7,4 @@ cd ..
 
 source .venv/bin/activate
 
-celery -A regista.tasks.tasks worker --loglevel=info 
+python -m regista.worker --config_path=./regista/configs/debug.yml

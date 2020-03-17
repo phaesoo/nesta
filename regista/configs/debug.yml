@@ -8,14 +8,15 @@ services:
       virtual_host: regista_server
       queue: "server"
     mysql:
-      host: localhost
+      host: 0.0.0.0
       port: 3306
       username: test
       password: test
       db: regista
-  server:
-    auto_start: false
-  worker:
     celery:
       backend: rpc://
-      broker: "amqp://test:test@localhost/regista_worker"
+      broker: amqp://test:test@localhost/regista_worker
+  server:
+    host: localhost
+    port: 9000
+    auto_start: true

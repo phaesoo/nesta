@@ -1,2 +1,3 @@
 #!/bin/bash
-touch /home/hspark/output/dm3
+
+touch /home/phaesoo/output/dm3

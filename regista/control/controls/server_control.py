@@ -17,4 +17,5 @@ class ServerControl(BaseControl):
         self._publish({
             "command": option.command
         })
+
         

@@ -23,7 +23,7 @@ class RabbitMQClient:
             password=password,
             virtual_host=virtual_host,
         )
-        self._init_connection()        
+        self._init_connection()
 
     def _init_connection(self):
         self._connection = pika.BlockingConnection(
@@ -69,12 +69,12 @@ class RabbitMQClient:
                 _, _, pickled = self._channel.basic_get(queue, auto_ack=True)
                 break
             except Exception as e:
-                print (e)
+                print(e)
                 retry_count += 1
                 time.sleep(0.1)
                 continue
 
-        if retry_count  == 5:
+        if retry_count == 5:
             raise ValueError("Connection error with AMQP")
 
         if pickled is None:

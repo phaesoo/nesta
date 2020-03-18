@@ -1,4 +1,5 @@
 import sys
+import socket
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
 from regista.utils.rabbitmq import RabbitMQClient
@@ -11,6 +12,15 @@ class BaseControl(ABC):
             description=f"Regista controller[{title}]")
         self._title = title
         self._configs = configs
+
+        # server health check
+        server_config = self._configs["services"]["server"]
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((server_config["host"], server_config["port"]))
+        client_socket.sendall("hi".encode())
+        recv = client_socket.recv(1024).decode()
+        if recv != "hello":
+            raise ValueError(f"Server is not running")
 
     @abstractmethod
     def _init_parser(self):

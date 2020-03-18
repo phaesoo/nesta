@@ -26,45 +26,80 @@ class Server:
         self._conn = MySQLClient()
         self._conn.init(**self._config_common["mysql"])
 
-        self._is_run = self._config_server.get("auto_start", False)
+        self._interval = self._config_server["interval"]
+        self._is_run = self._config_server["auto_start"]
         self._is_exit = False
 
-    def health_check(self):
+    def run(self):
+        logger.info("Server has been started")
+        threads = [Thread(target=t) for t in [self._health_check, self._update_result]]
+
+        for t in threads:
+            t.start()
+
+        self._main()
+
+        for t in threads:
+            t.join()
+        logger.info("Server has been terminated")
+
+    def _health_check(self):
         """
         thread for server health check
         """
         logger.info("Health check started")
 
+        # prepare for server_socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind(
             (self._config_server["host"], self._config_server["port"]))
         server_socket.listen()
+        server_socket.settimeout(0.5)
 
         while True:
+            if self._is_exit:
+                break
             try:
                 client_socket, _ = server_socket.accept()
                 msg = client_socket.recv(1024).decode()
                 if msg == "hi":
                     client_socket.sendall("hello".encode())
+            except socket.timeout:
+                pass
             except Exception as e:
                 logger.error(f"health_check error: {e}")
 
         client_socket.close()
         server_socket.close()
 
-    def run(self):
+    def _main(self):
+        """
+        main thread for handling message queues and assigning jobs
+        """
         mq_client = RabbitMQClient()
         mq_client.init(**self._config_common["rabbitmq"])
 
         queue = self._config_common["rabbitmq"]["queue"]
         # purge and declare before starting
-        mq_client.queue_purge(queue)
+        try:
+            pass
+            #mq_client.queue_purge(queue)
+        except:
+            pass
         mq_client.queue_declare(queue)
+
+        is_first = True
 
         while True:
             if self._is_exit:
                 break
+
+            # imte interval from second loop
+            if is_first is True:
+                is_first = False
+            else:
+                time.sleep(self._interval)
 
             # main queue has high priority
             data = mq_client.get(queue)
@@ -77,15 +112,11 @@ class Server:
                 continue
 
             if not self._is_run:
-                logger.info("Server has been stopped. sleep 5 sec")
-                time.sleep(5)
+                logger.info("Server has been stopped")
                 continue
 
             # assign jobs
             self._assign_jobs()
-
-            logger.info("assign finished")
-            time.sleep(5)
 
     def _handle_queue(self, data):
         title = data["title"]
@@ -136,19 +167,25 @@ class Server:
             logger.error(e)
             self._conn.rollback()
 
-    def update_result(self):
-        logger.info("update_result started")
+    def _update_result(self):
         """
-        Send task queue to celery broker
+        thread for updating result
         """
 
+        is_first = True
+
         while True:
+            # imte interval from second loop
+            if is_first is True:
+                is_first = False
+            else:
+                time.sleep(self._interval)
+
             if self._is_exit is True:
                 logger.warn(f"update_result is terminated")
                 break
             if self._is_run is False:
-                logger.warn("Server has been stopped. sleep 5 sec")
-                time.sleep(5)
+                logger.info("Server has been stopped")
                 continue
 
             # get finished jobs
@@ -158,8 +195,7 @@ class Server:
                 """
             )
             if not len(data):
-                logger.warn("No data to update result")
-                time.sleep(5)
+                logger.info("No data to update result")
                 continue
 
             # update job_status and task_id=NULL
@@ -188,6 +224,3 @@ class Server:
             except Exception as e:
                 logger.error(e)
                 self._conn.rollback()
-
-            logger.info("Sleep 5 secs...")
-            time.sleep(5)

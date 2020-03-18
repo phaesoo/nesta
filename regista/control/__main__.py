@@ -30,14 +30,5 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Undefined item: {option.item}")
 
-    # server health check
-    server_config = configs["services"]["server"]
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((server_config["host"], server_config["port"]))
-    client_socket.sendall("hi".encode())
-    data = client_socket.recv(1024)
-    if data.decode() != "hello":
-        raise ValueError(f"Server is not running")
-
     ctrl = control(configs=configs)
     ctrl.main()

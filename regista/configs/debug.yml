@@ -19,4 +19,5 @@ services:
   server:
     host: localhost
     port: 9000
+    interval: 3
     auto_start: true

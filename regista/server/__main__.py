@@ -22,13 +22,4 @@ if __name__ == "__main__":
     server = Server(
         configs=yaml.load(open(option.config_path), Loader=yaml.Loader)
         )
-
-    threads = [Thread(target=t) for t in [server.health_check, server.update_result]]
-
-    for t in threads:
-        t.start()
-
     server.run()
-    
-    for t in threads:
-        t.join()

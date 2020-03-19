@@ -31,4 +31,5 @@ if __name__ == "__main__":
         raise ValueError(f"Undefined item: {option.item}")
 
     ctrl = control(configs=configs)
+    ctrl.ping()
     ctrl.main()

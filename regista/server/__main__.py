@@ -1,25 +1,25 @@
 import os
-import yaml
 from argparse import ArgumentParser
 from threading import Thread
 from regista.utils.log import init_logger
+from regista.configs.util import parse_config
 from .server import Server
 
 
 def parse_arguments():
     parser = ArgumentParser("Regista server")
-    parser.add_argument("--mode", "-m", dest="mode", type=str, default="debug", help="{prod, debug}")
-    parser.add_argument("--config_path", dest="config_path", type=str, help="conifg file path")
+    parser.add_argument("--mode", "-m", dest="mode", type=str,
+                        default="debug", help="{prod, debug}")
+    parser.add_argument("--config_path", dest="config_path",
+                        type=str, help="conifg file path")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    init_logger("server")
-
     option = parse_arguments()
     assert os.path.exists(option.config_path)
 
-    server = Server(
-        configs=yaml.load(open(option.config_path), Loader=yaml.Loader)
-        )
-    server.run()
+    configs = parse_config(option.config_path)
+    init_logger(configs["services"]["server"]["log_path"], "server")
+    server = Server(configs=configs)
+    server.start()

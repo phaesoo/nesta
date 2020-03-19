@@ -20,4 +20,5 @@ services:
     host: localhost
     port: 9000
     interval: 3
+    log_path: "./log"
     auto_start: true

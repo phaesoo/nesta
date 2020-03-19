@@ -12,10 +12,12 @@ class ServerControl(BaseControl):
         subparsers.add_parser("resume")
         subparsers.add_parser("stop")
         subparsers.add_parser("terminate")
+        subparsers.add_parser("ping")
 
     def _main(self, option):
-        self._publish({
-            "command": option.command
-        })
-
-        
+        if option.command == "ping":
+            self.ping()
+        else:
+            self._publish({
+                "command": option.command
+            })

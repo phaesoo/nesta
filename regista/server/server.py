@@ -1,3 +1,4 @@
+import os
 import logging
 import socket
 import time
@@ -5,21 +6,30 @@ import pickle
 from threading import Thread
 from .define import define
 from . import schedule
+from regista.external.daemon import Daemon
 from regista.tasks.tasks import get_app
 from regista.utils.rabbitmq import RabbitMQClient
 from regista.utils.mysql import MySQLClient
-from regista.utils.log import init_logger
 
 
 logger = logging.getLogger("server")
 
 
-class Server:
+class Server(Daemon):
     def __init__(self, configs):
         assert isinstance(configs, dict)
 
         self._config_common = configs["services"]["common"]
         self._config_server = configs["services"]["server"]
+
+        pidfile = os.path.join(configs["ROOT_DIR"], "server.pid")
+        daemon_log = os.path.join(configs["ROOT_DIR"], "daemon.log")
+
+        super().__init__(
+            pidfile=pidfile,
+            stdout=daemon_log,
+            stderr=daemon_log
+            )
 
         self._app = get_app(**self._config_common["celery"])
 

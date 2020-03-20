@@ -55,15 +55,10 @@ class Daemon(ABC):
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
 
-        # write pidfile
-        atexit.register(self.remove_pidfile)
-        pid = str(os.getpid())
-        open(self.pidfile, 'w+').write("%s\n" % pid)
-
-    def remove_pidfile(self):
+    def _remove_pidfile(self):
         os.remove(self.pidfile)
 
-    def start(self):
+    def start(self, daemonize=True):
         """
         start the daemon
         """
@@ -81,7 +76,14 @@ class Daemon(ABC):
             sys.exit(1)
 
         # start the daemon
-        self.daemonize()
+        if daemonize:
+            self.daemonize()
+
+        # dump pidfile
+        pid = str(os.getpid())
+        open(self.pidfile, 'w+').write("%s\n" % pid)
+        atexit.register(self._remove_pidfile)
+
         self.run()
 
     def stop(self):
@@ -89,31 +91,20 @@ class Daemon(ABC):
         Stop the daemon
         """
         # get the pid from the pidfile
-        try:
-            pf = open(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
 
-        if not pid:
+        if not os.path.exists(self.pidfile):
             message = "pidfile %s does not exist. Daemon is not running?\n"
             sys.stderr.write(message % self.pidfile)
-            return  # not an error in a restart
+            return
+        
+        with open(self.pidfile, 'r') as f:
+            pid = int(f.read().strip())
 
-        # try killing the daemon process
+        self._remove_pidfile()
         try:
-            while 1:
-                os.kill(pid, SIGTERM)
-                time.sleep(0.1)
-        except OSError as err:
-            err = str(err)
-            if err.find("No such process") > 0:
-                if os.path.exists(self.pidfile):
-                    os.remove(self.pidfile)
-            else:
-                print(err)
-                sys.exit(1)
+            os.kill(pid, SIGTERM)
+        except OSError:
+            pass
 
     def restart(self):
         """

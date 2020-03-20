@@ -1,0 +1,24 @@
+services:
+  common:
+    rabbitmq:
+      host: localhost
+      port: 5672
+      username: test
+      password: test
+      virtual_host: absinthe_server
+      queue: "server"
+    mysql:
+      host: 0.0.0.0
+      port: 3306
+      username: test
+      password: test
+      db: absinthe
+    celery:
+      backend: rpc://
+      broker: amqp://test:test@localhost/absinthe_worker
+  server:
+    host: localhost
+    port: 9000
+    interval: 2
+    log_path: "{ROOT_DIR}/tests/log"
+    auto_start: true

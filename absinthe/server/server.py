@@ -24,11 +24,13 @@ class Server(Daemon):
         self._config_server = configs["services"]["server"]
 
         log_path = get_defined_path(configs["services"]["server"]["log_path"], configs)
+        print (log_path)
         pidfile = os.path.join(log_path, "server.pid")
         daemon_log = os.path.join(log_path, "daemon.log")
 
         super().__init__(
             pidfile=pidfile,
+            stdin=daemon_log,
             stdout=daemon_log,
             stderr=daemon_log
         )
@@ -59,6 +61,7 @@ class Server(Daemon):
 
         for t in threads:
             t.join()
+
         logger.info("Server has been terminated")
 
     def _set_status(self, status):

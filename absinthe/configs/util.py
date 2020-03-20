@@ -9,7 +9,9 @@ def parse_config(filename):
     configs = dict()
 
     # from environment variables
-    configs["ROOT_DIR"] = os.environ["ROOT_DIR"]
+    root_dir = os.environ.get("ROOT_DIR")
+    if root_dir:
+        configs["ROOT_DIR"] = root_dir
 
     # read from yaml
     configs.update(yaml.load(open(filename), Loader=yaml.Loader))

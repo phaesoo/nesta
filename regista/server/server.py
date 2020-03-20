@@ -3,9 +3,10 @@ import logging
 import socket
 import time
 import pickle
-from threading import Thread
+from threading import Thread, Lock
 from .define import define
 from . import schedule
+from regista.configs.util import get_defined_path
 from regista.external.daemon import Daemon
 from regista.tasks.tasks import get_app
 from regista.utils.rabbitmq import RabbitMQClient
@@ -22,14 +23,15 @@ class Server(Daemon):
         self._config_common = configs["services"]["common"]
         self._config_server = configs["services"]["server"]
 
-        pidfile = os.path.join(configs["ROOT_DIR"], "server.pid")
-        daemon_log = os.path.join(configs["ROOT_DIR"], "daemon.log")
+        log_path = get_defined_path(configs["services"]["server"]["log_path"], configs)
+        pidfile = os.path.join(log_path, "server.pid")
+        daemon_log = os.path.join(log_path, "daemon.log")
 
         super().__init__(
             pidfile=pidfile,
             stdout=daemon_log,
             stderr=daemon_log
-            )
+        )
 
         self._app = get_app(**self._config_common["celery"])
 
@@ -37,26 +39,44 @@ class Server(Daemon):
         self._conn.init(**self._config_common["mysql"])
 
         self._interval = self._config_server["interval"]
-        self._status = define.STATUS_RUNNING if self._config_server["auto_start"] else define.STATUS_STOPPED
+        self._status = define.STATUS_RUNNING if self._config_server[
+            "auto_start"] else define.STATUS_STOPPED
+
+        self._mutex = Lock()
 
     def run(self):
         logger.info("Server has been started")
-        threads = [Thread(target=t) for t in [self._health_check, self._update_result]]
+        threads = [Thread(target=self._wrap, args=[func])
+                   for func in [self._communicate, self._update_result]]
 
         for t in threads:
             t.start()
 
-        self._main()
+        try:
+            self._wrap(self._main)
+        except:
+            pass
 
         for t in threads:
             t.join()
         logger.info("Server has been terminated")
 
-    def _health_check(self):
+    def _set_status(self, status):
+        with self._mutex:
+            self._status = status
+
+    def _wrap(self, func, *args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            self._status = define.STATUS_TERMINATED
+            logger.critical(f"Unexpected error. terminate server :{e}")
+
+    def _communicate(self):
         """
-        thread for server health check
+        thread for communicating with external clients(control)
         """
-        logger.info("Health check started")
+        logger.debug("communicate thread has been started")
 
         # prepare for server_socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -68,12 +88,17 @@ class Server(Daemon):
 
         while True:
             if self._status == define.STATUS_TERMINATED:
+                logger.debug("communicate thread has been terminated")
                 break
             try:
                 client_socket, _ = server_socket.accept()
                 msg = client_socket.recv(1024).decode()
                 if msg == "hi":
                     client_socket.sendall("hello".encode())
+                elif msg == "status":
+                    client_socket.sendall(self._status.encode())
+                else:
+                    logger.warn(f"Unknown msg: {msg}")
             except socket.timeout:
                 pass
             except Exception as e:
@@ -86,6 +111,8 @@ class Server(Daemon):
         """
         main thread for handling message queues and assigning jobs
         """
+        logger.debug("main thread has been started")
+
         mq_client = RabbitMQClient()
         mq_client.init(**self._config_common["rabbitmq"])
 
@@ -102,6 +129,7 @@ class Server(Daemon):
 
         while True:
             if self._status == define.STATUS_TERMINATED:
+                logger.debug("main thread has been terminated")
                 break
 
             # imte interval from second loop
@@ -113,7 +141,7 @@ class Server(Daemon):
             # main queue has high priority
             data = mq_client.get(queue)
             if data:
-                logger.info(data)
+                logger.debug(data)
                 try:
                     self._handle_queue(data)
                 except Exception as e:
@@ -121,7 +149,7 @@ class Server(Daemon):
                 continue
 
             if self._status == define.STATUS_STOPPED:
-                logger.info("Server has been stopped")
+                logger.debug("Server has been stopped")
                 continue
 
             # assign jobs
@@ -135,16 +163,16 @@ class Server(Daemon):
             cmd = body.get("command", None)
             by = body.get("by", "undefined")
             if cmd == "terminate":
-                logger.warn(f"Server is terminated by {by}")
-                self._status = define.STATUS_TERMINATED
+                logger.info(f"Server is terminated by {by}")
+                self._set_status(define.STATUS_TERMINATED)
             elif cmd == "stop":
-                self._status = define.STATUS_STOPPED
-                logger.warn(f"Server is stopped by {by}")
+                self._set_status(define.STATUS_STOPPED)
+                logger.info(f"Server is stopped by {by}")
             elif cmd == "resume":
-                self._status = define.STATUS_RUNNING
-                logger.warn(f"Server is resumed by {by}")
+                self._set_status(define.STATUS_RUNNING)
+                logger.info(f"Server is resumed by {by}")
             else:
-                logger.warn(f"Undefined {title} command {by}: {cmd}")
+                logger.info(f"Undefined {title} command {by}: {cmd}")
         elif title == "schedule":
             cmd = body.get("command", None)
             if cmd == "insert":
@@ -166,13 +194,12 @@ class Server(Daemon):
         # assign jobs
         jobs = schedule.get_assignable_jobs(self._conn)
         if not len(jobs):
-            logger.info("There is no assignable jobs")
+            logger.debug("There is no assignable jobs")
             return
 
-        logger.info(jobs)
         try:
             for row in jobs:
-                logger.info(f"assign job: {row[1]}")
+                logger.debug(f"assign job: {row[1]}")
                 task_id = self._app.send_task("script", [row[1]])
                 self._conn.execute(
                     f"""
@@ -188,6 +215,7 @@ class Server(Daemon):
         """
         thread for updating result
         """
+        logger.debug("update_result thread has been started")
 
         is_first = True
 
@@ -199,10 +227,10 @@ class Server(Daemon):
                 time.sleep(self._interval)
 
             if self._status == define.STATUS_TERMINATED:
-                logger.warn(f"update_result is terminated")
+                logger.debug("update_result thread has been terminated")
                 break
             elif self._status == define.STATUS_STOPPED:
-                logger.info("Server has been stopped")
+                logger.debug("update_result thread has been stopped")
                 continue
 
             # get finished jobs
@@ -212,14 +240,14 @@ class Server(Daemon):
                 """
             )
             if not len(data):
-                logger.info("No data to update result")
+                logger.debug("No data to update result")
                 continue
 
             # update job_status and task_id=NULL
             try:
                 for row in data:
                     result = self._app.AsyncResult(row[0])
-                    print (result.state)
+                    print(result.state)
                     if result.state == "PENDING":
                         self._conn.execute(
                             f"""

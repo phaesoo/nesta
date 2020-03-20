@@ -10,7 +10,7 @@ def init_logger(filepath, name):
         os.makedirs(filepath)
 
     formatter = logging.Formatter('[%(levelname)s|%(filename)s:%(lineno)s] %(asctime)s > %(message)s')
-    filename = os.path.join(filepath, "test.log")
+    filename = os.path.join(filepath, f"{name}.log")
     log_handler = handlers.TimedRotatingFileHandler(filename=filename, when='midnight', interval=1, encoding='utf-8')
     log_handler.setFormatter(formatter)
     log_handler.suffix = "%Y%m%d"

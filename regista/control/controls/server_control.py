@@ -12,12 +12,18 @@ class ServerControl(BaseControl):
         subparsers.add_parser("resume")
         subparsers.add_parser("stop")
         subparsers.add_parser("terminate")
+        subparsers.add_parser("status")
         subparsers.add_parser("ping")
 
     def _main(self, option):
         if option.command == "ping":
-            self.ping()
-        else:
+            print (self._send("hi"))
+        elif option.command == "status":
+            print ("server status: {}".format(self._send("status")))
+        elif option.command in ["stop", "resume", "terminate"]:
             self._publish({
                 "command": option.command
             })
+            print (f"Send command to server: {option.command}")
+        else:
+            raise ValueError(f"Undefined command: {option.command}")

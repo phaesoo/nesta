@@ -13,18 +13,27 @@ class BaseControl(ABC):
         self._title = title
         self._configs = configs
 
-    def ping(self):
         try:
-            # server health check
-            server_config = self._configs["services"]["server"]
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((server_config["host"], server_config["port"]))
-            client_socket.sendall("hi".encode())
-            recv = client_socket.recv(1024).decode()
-            if recv != "hello":
-                raise ValueError(f"Server is not running")
-        except:
+            recv = self._send("hi")
+            if recv == "hello":
+                pass
+            else:
+                raise ValueError(recv)
+        except ConnectionRefusedError:
             print ("Connection refused, server may not running.")
+            sys.exit(1)
+        except Exception as e:
+            print (f"Unexpected error: {e}")
+            sys.exit(1)
+
+    def _send(self, msg):
+        assert isinstance(msg, str)
+        # server health check
+        server_config = self._configs["services"]["server"]
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((server_config["host"], server_config["port"]))
+        client_socket.sendall(msg.encode())
+        return client_socket.recv(1024).decode()
 
     @abstractmethod
     def _init_parser(self):

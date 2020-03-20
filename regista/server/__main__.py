@@ -2,7 +2,7 @@ import os
 from argparse import ArgumentParser
 from threading import Thread
 from regista.utils.log import init_logger
-from regista.configs.util import parse_config
+from regista.configs.util import parse_config, get_defined_path
 from .server import Server
 
 
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     assert os.path.exists(option.config_path)
 
     configs = parse_config(option.config_path)
-    init_logger(configs["services"]["server"]["log_path"], "server")
+    init_logger(get_defined_path(configs["services"]["server"]["log_path"], configs), "server")
     server = Server(configs=configs)
     if option.daemonize is True:
         server.start()

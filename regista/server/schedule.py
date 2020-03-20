@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger("server")
 
 
-def _dump_schedule_hist(conn):
+def dump_schedule_hist(conn):
     """
     dump job_schedule > job_schedule_hist
     empty job_schedule
@@ -29,9 +29,9 @@ def _dump_schedule_hist(conn):
     conn.execute("DELETE FROM job_schedule")
 
 
-def _insert_schedule(conn, date):
+def generate_schedule(conn, date):
     """
-    insert job_schedule table with job table 
+    generate job_schedule table with job table 
     """
     target_dt = datetime(int(date[:4]), int(date[4:6]), int(date[6:8]))
     cutoff_dt = target_dt + timedelta(days=1)
@@ -50,12 +50,12 @@ def _insert_schedule(conn, date):
         scheduled_time = None
         if cron:
             scheduled_time = croniter(row[2], target_dt).get_next(datetime)
-            print (cutoff_dt, scheduled_time)
+            print(cutoff_dt, scheduled_time)
             if cutoff_dt < scheduled_time:
                 logger.warn(
                     f"Skip scheduled_time > cutoff: id: {row[0]} name: {row[1]}")
                 continue
-            
+
         values.append((row[0], target_dt.date(), scheduled_time, row[3]))
 
     conn.executemany(
@@ -64,17 +64,6 @@ def _insert_schedule(conn, date):
         VALUES (%s, %s, %s, %s)
         """, values
     )
-
-
-def insert_schedule(conn, date):
-    assert isinstance(date, str)
-    try:
-        _dump_schedule_hist(conn)
-        _insert_schedule(conn, date)
-        conn.commit()
-    except Exception as e:
-        logger.error(e)
-        conn.rollback()
 
 
 def get_assignable_jobs(conn):

@@ -37,8 +37,7 @@ class Server(Daemon):
         self._conn.init(**self._config_common["mysql"])
 
         self._interval = self._config_server["interval"]
-        self._is_run = self._config_server["auto_start"]
-        self._is_exit = False
+        self._status = define.STATUS_RUNNING if self._config_server["auto_start"] else define.STATUS_STOPPED
 
     def run(self):
         logger.info("Server has been started")
@@ -68,7 +67,7 @@ class Server(Daemon):
         server_socket.settimeout(0.5)
 
         while True:
-            if self._is_exit:
+            if self._status == define.STATUS_TERMINATED:
                 break
             try:
                 client_socket, _ = server_socket.accept()
@@ -102,7 +101,7 @@ class Server(Daemon):
         is_first = True
 
         while True:
-            if self._is_exit:
+            if self._status == define.STATUS_TERMINATED:
                 break
 
             # imte interval from second loop
@@ -121,7 +120,7 @@ class Server(Daemon):
                     logger.error(f"Error while _handle_queue: {e}")
                 continue
 
-            if not self._is_run:
+            if self._status == define.STATUS_STOPPED:
                 logger.info("Server has been stopped")
                 continue
 
@@ -137,19 +136,27 @@ class Server(Daemon):
             by = body.get("by", "undefined")
             if cmd == "terminate":
                 logger.warn(f"Server is terminated by {by}")
-                self._is_exit = True
+                self._status = define.STATUS_TERMINATED
             elif cmd == "stop":
-                self._is_run = False
+                self._status = define.STATUS_STOPPED
                 logger.warn(f"Server is stopped by {by}")
             elif cmd == "resume":
-                self._is_run = True
+                self._status = define.STATUS_RUNNING
                 logger.warn(f"Server is resumed by {by}")
             else:
                 logger.warn(f"Undefined {title} command {by}: {cmd}")
         elif title == "schedule":
             cmd = body.get("command", None)
             if cmd == "insert":
-                schedule.insert_schedule(self._conn, body["date"])
+                date = body["date"]
+                assert isinstance(date, str)
+                try:
+                    schedule.dump_schedule_hist(self._conn)
+                    schedule.generate_schedule(self._conn, date)
+                    self._conn.commit()
+                except Exception as e:
+                    logger.error(e)
+                    self._conn.rollback()
             else:
                 logger.warn(f"Undefined {title} command {by}: {cmd}")
         else:
@@ -191,10 +198,10 @@ class Server(Daemon):
             else:
                 time.sleep(self._interval)
 
-            if self._is_exit is True:
+            if self._status == define.STATUS_TERMINATED:
                 logger.warn(f"update_result is terminated")
                 break
-            if self._is_run is False:
+            elif self._status == define.STATUS_STOPPED:
                 logger.info("Server has been stopped")
                 continue
 

@@ -8,10 +8,10 @@ from .server import Server
 
 def parse_arguments():
     parser = ArgumentParser("Regista server")
-    parser.add_argument("--mode", "-m", dest="mode", type=str,
-                        default="debug", help="{prod, debug}")
     parser.add_argument("--config_path", dest="config_path",
                         type=str, help="conifg file path")
+    parser.add_argument("--daemonize", "-d", dest="daemonize",
+                        type=bool, default=True, help="daemonize or not")
     return parser.parse_args()
 
 
@@ -22,4 +22,7 @@ if __name__ == "__main__":
     configs = parse_config(option.config_path)
     init_logger(configs["services"]["server"]["log_path"], "server")
     server = Server(configs=configs)
-    server.start()
+    if option.daemonize is True:
+        server.start()
+    else:
+        server.run()

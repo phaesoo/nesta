@@ -2,4 +2,4 @@
 
 source ./conf.sh
 
-python -m regista.server --config_path=./regista/configs/debug.yml
+python -m absinthe.server --config_path=./absinthe/configs/debug.yml

@@ -1,4 +1,4 @@
-# Regista
+# Absinthe
 
 
 # Core concepts

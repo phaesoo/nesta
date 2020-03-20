@@ -2,10 +2,10 @@ from setuptools import setup
 
 
 setup(
-    name='regista',
+    name='absinthe',
     version='1.0.0',
     author='haesoo',
-    packages=['regista'],
+    packages=['absinthe'],
     include_package_data=True,
     install_requires=[
     ],

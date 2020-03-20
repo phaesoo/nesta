@@ -2,4 +2,4 @@
 
 source ./conf.sh
 
-python -m regista.worker --config_path=./regista/configs/debug.yml
+python -m absinthe.worker --config_path=./absinthe/configs/debug.yml

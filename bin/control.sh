@@ -2,4 +2,4 @@
 
 source ./conf.sh
 
-python -m regista.control --item=$1 --config_path=./regista/configs/debug.yml $@
+python -m absinthe.control --item=$1 --config_path=./absinthe/configs/debug.yml $@

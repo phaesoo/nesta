@@ -13,12 +13,12 @@ class Daemon(ABC):
     """
 
     def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
-        self.stdin = stdin
-        self.stdout = stdout
-        self.stderr = stderr
-        self.pidfile = pidfile
+        self._stdin = stdin
+        self._stdout = stdout
+        self._stderr = stderr
+        self._pidfile = pidfile
 
-    def daemonize(self):
+    def _daemonize(self):
         # do the UNIX double-fork magic, see Stevens' "Advanced
         # Programming in the UNIX Environment" for details (ISBN 0201563177)
         try:
@@ -48,23 +48,23 @@ class Daemon(ABC):
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        si = open(self.stdin, 'r')
-        so = open(self.stdout, 'a+')
-        se = open(self.stderr, 'a+')
+        si = open(self._stdin, 'r')
+        so = open(self._stdout, 'a+')
+        se = open(self._stderr, 'a+')
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
 
     def _remove_pidfile(self):
-        os.remove(self.pidfile)
+        os.remove(self._pidfile)
 
-    def start(self, daemonize=True):
+    def start(self):
         """
         start the daemon
         """
         # check for a pidfile to see if the daemon already runs
         try:
-            pf = open(self.pidfile, 'r')
+            pf = open(self._pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
@@ -72,19 +72,18 @@ class Daemon(ABC):
 
         if pid:
             message = "pidfile %s already exist. Daemon already running?\n"
-            sys.stderr.write(message % self.pidfile)
+            sys.stderr.write(message % self._pidfile)
             sys.exit(1)
 
-        # start the daemon
-        if daemonize:
-            self.daemonize()
+        # daemonize current process
+        self._daemonize()
 
         # dump pidfile
         pid = str(os.getpid())
-        open(self.pidfile, 'w+').write("%s\n" % pid)
+        open(self._pidfile, 'w+').write("%s\n" % pid)
         atexit.register(self._remove_pidfile)
 
-        self.run()
+        self._run()
 
     def stop(self):
         """
@@ -92,12 +91,12 @@ class Daemon(ABC):
         """
         # get the pid from the pidfile
 
-        if not os.path.exists(self.pidfile):
+        if not os.path.exists(self._pidfile):
             message = "pidfile %s does not exist. Daemon is not running?\n"
-            sys.stderr.write(message % self.pidfile)
+            sys.stderr.write(message % self._pidfile)
             return
         
-        with open(self.pidfile, 'r') as f:
+        with open(self._pidfile, 'r') as f:
             pid = int(f.read().strip())
 
         self._remove_pidfile()
@@ -114,8 +113,8 @@ class Daemon(ABC):
         self.start()
 
     @abstractmethod
-    def run(self):
+    def _run(self):
         """
         should override this method when you subclass Daemon. it will be called after the process has been
-        daemonized by start() or restart().
+        _daemonized by start() or restart().
         """

@@ -3,17 +3,23 @@ import logging
 import socket
 import time
 import pickle
+from argparse import ArgumentParser
 from threading import Thread, Lock
-from .define import define
-from . import schedule
-from absinthe.configs.util import get_defined_path
+from absinthe.server.define import define
+from absinthe.server import schedule
 from absinthe.external.daemon import Daemon
 from absinthe.tasks.tasks import get_app
 from absinthe.utils.rabbitmq import RabbitMQClient
 from absinthe.utils.mysql import MySQLClient
+from absinthe.utils.log import init_logger
+from absinthe.configs.util import parse_env, parse_config, get_defined_path
 
 
-logger = logging.getLogger("server")
+def parse_arguments():
+    parser = ArgumentParser("Absinthe server")
+    parser.add_argument("--daemonize", "-d", dest="daemonize",
+                        type=bool, default=True, help="daemonize or not")
+    return parser.parse_args()
 
 
 class Server(Daemon):
@@ -23,8 +29,8 @@ class Server(Daemon):
         self._config_common = configs["services"]["common"]
         self._config_server = configs["services"]["server"]
 
-        log_path = get_defined_path(configs["services"]["server"]["log_path"], configs)
-        print (log_path)
+        log_path = get_defined_path(configs["services"]["server"]["log_path"], configs["env"])
+
         pidfile = os.path.join(log_path, "server.pid")
         daemon_log = os.path.join(log_path, "daemon.log")
 
@@ -34,6 +40,8 @@ class Server(Daemon):
             stdout=daemon_log,
             stderr=daemon_log
         )
+
+        self._logger = init_logger(log_path, "server")
 
         self._app = get_app(**self._config_common["celery"])
 
@@ -46,8 +54,8 @@ class Server(Daemon):
 
         self._mutex = Lock()
 
-    def run(self):
-        logger.info("Server has been started")
+    def _run(self):
+        self._logger.info("Server has been started")
         threads = [Thread(target=self._wrap, args=[func])
                    for func in [self._communicate, self._update_result]]
 
@@ -56,13 +64,13 @@ class Server(Daemon):
 
         try:
             self._wrap(self._main)
-        except:
-            pass
+        except Exception as e:
+            print (e)
 
         for t in threads:
             t.join()
 
-        logger.info("Server has been terminated")
+        self._logger.info("Server has been terminated")
 
     def _set_status(self, status):
         with self._mutex:
@@ -73,13 +81,13 @@ class Server(Daemon):
             func(*args, **kwargs)
         except Exception as e:
             self._status = define.STATUS_TERMINATED
-            logger.critical(f"Unexpected error. terminate server :{e}")
+            self._logger.critical(f"Unexpected error. terminate server :{e}")
 
     def _communicate(self):
         """
         thread for communicating with external clients(control)
         """
-        logger.debug("communicate thread has been started")
+        self._logger.debug("communicate thread has been started")
 
         # prepare for server_socket
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -91,7 +99,7 @@ class Server(Daemon):
 
         while True:
             if self._status == define.STATUS_TERMINATED:
-                logger.debug("communicate thread has been terminated")
+                self._logger.debug("communicate thread has been terminated")
                 break
             try:
                 client_socket, _ = server_socket.accept()
@@ -101,11 +109,11 @@ class Server(Daemon):
                 elif msg == "status":
                     client_socket.sendall(self._status.encode())
                 else:
-                    logger.warn(f"Unknown msg: {msg}")
+                    self._logger.warn(f"Unknown msg: {msg}")
             except socket.timeout:
                 pass
             except Exception as e:
-                logger.error(f"health_check error: {e}")
+                self._logger.error(f"health_check error: {e}")
 
         client_socket.close()
         server_socket.close()
@@ -114,7 +122,7 @@ class Server(Daemon):
         """
         main thread for handling message queues and assigning jobs
         """
-        logger.debug("main thread has been started")
+        self._logger.debug("main thread has been started")
 
         mq_client = RabbitMQClient()
         mq_client.init(**self._config_common["rabbitmq"])
@@ -132,7 +140,7 @@ class Server(Daemon):
 
         while True:
             if self._status == define.STATUS_TERMINATED:
-                logger.debug("main thread has been terminated")
+                self._logger.debug("main thread has been terminated")
                 break
 
             # imte interval from second loop
@@ -144,15 +152,15 @@ class Server(Daemon):
             # main queue has high priority
             data = mq_client.get(queue)
             if data:
-                logger.debug(data)
+                self._logger.debug(data)
                 try:
                     self._handle_queue(data)
                 except Exception as e:
-                    logger.error(f"Error while _handle_queue: {e}")
+                    self._logger.error(f"Error while _handle_queue: {e}")
                 continue
 
             if self._status == define.STATUS_STOPPED:
-                logger.debug("Server has been stopped")
+                self._logger.debug("Server has been stopped")
                 continue
 
             # assign jobs
@@ -166,16 +174,16 @@ class Server(Daemon):
             cmd = body.get("command", None)
             by = body.get("by", "undefined")
             if cmd == "terminate":
-                logger.info(f"Server is terminated by {by}")
+                self._logger.info(f"Server is terminated by {by}")
                 self._set_status(define.STATUS_TERMINATED)
             elif cmd == "stop":
                 self._set_status(define.STATUS_STOPPED)
-                logger.info(f"Server is stopped by {by}")
+                self._logger.info(f"Server is stopped by {by}")
             elif cmd == "resume":
                 self._set_status(define.STATUS_RUNNING)
-                logger.info(f"Server is resumed by {by}")
+                self._logger.info(f"Server is resumed by {by}")
             else:
-                logger.info(f"Undefined {title} command {by}: {cmd}")
+                self._logger.info(f"Undefined {title} command {by}: {cmd}")
         elif title == "schedule":
             cmd = body.get("command", None)
             if cmd == "insert":
@@ -186,10 +194,10 @@ class Server(Daemon):
                     schedule.generate_schedule(self._conn, date)
                     self._conn.commit()
                 except Exception as e:
-                    logger.error(e)
+                    self._logger.error(e)
                     self._conn.rollback()
             else:
-                logger.warn(f"Undefined {title} command {by}: {cmd}")
+                self._logger.warn(f"Undefined {title} command {by}: {cmd}")
         else:
             raise ValueError(f"Undefined title: {title}")
 
@@ -197,12 +205,12 @@ class Server(Daemon):
         # assign jobs
         jobs = schedule.get_assignable_jobs(self._conn)
         if not len(jobs):
-            logger.debug("There is no assignable jobs")
+            self._logger.debug("There is no assignable jobs")
             return
 
         try:
             for row in jobs:
-                logger.debug(f"assign job: {row[1]}")
+                self._logger.debug(f"assign job: {row[1]}")
                 task_id = self._app.send_task("script", [row[1]])
                 self._conn.execute(
                     f"""
@@ -211,14 +219,14 @@ class Server(Daemon):
                 )
             self._conn.commit()
         except Exception as e:
-            logger.error(e)
+            self._logger.error(e)
             self._conn.rollback()
 
     def _update_result(self):
         """
         thread for updating result
         """
-        logger.debug("update_result thread has been started")
+        self._logger.debug("update_result thread has been started")
 
         is_first = True
 
@@ -230,10 +238,10 @@ class Server(Daemon):
                 time.sleep(self._interval)
 
             if self._status == define.STATUS_TERMINATED:
-                logger.debug("update_result thread has been terminated")
+                self._logger.debug("update_result thread has been terminated")
                 break
             elif self._status == define.STATUS_STOPPED:
-                logger.debug("update_result thread has been stopped")
+                self._logger.debug("update_result thread has been stopped")
                 continue
 
             # get finished jobs
@@ -243,7 +251,7 @@ class Server(Daemon):
                 """
             )
             if not len(data):
-                logger.debug("No data to update result")
+                self._logger.debug("No data to update result")
                 continue
 
             # update job_status and task_id=NULL
@@ -270,5 +278,19 @@ class Server(Daemon):
                         )
                 self._conn.commit()
             except Exception as e:
-                logger.error(e)
+                self._logger.error(e)
                 self._conn.rollback()
+
+
+if __name__ == "__main__":
+    env_dict = parse_env()
+    config_path = env_dict["CONFIG_PATH"]
+    assert os.path.exists(config_path)
+
+    configs = parse_config(config_path)
+    configs["env"] = env_dict
+
+    option = parse_arguments()
+
+    server = Server(configs=configs)
+    server.start()

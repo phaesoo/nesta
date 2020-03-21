@@ -24,3 +24,5 @@ def init_logger(filepath, name):
     logger.setLevel(logging.DEBUG)
     logger.addHandler(log_handler)
     logger.addHandler(stream_handler)
+
+    return logger

@@ -3,23 +3,23 @@ import sys
 import socket
 import yaml
 from argparse import ArgumentParser, REMAINDER
-from .controls import *
+from absinthe.control.controls import *
+from absinthe.configs.util import parse_env, parse_config
 
 
 def parse_arguments():
     parser = ArgumentParser()
     parser.add_argument("--item", dest="item",
                         help="{schedule, server, worker}", required=True)
-    parser.add_argument("--config_path", dest="config_path",
-                        help="config path", required=True)
     return parser.parse_args(sys.argv[1:3])
 
 
 if __name__ == "__main__":
-    option = parse_arguments()
-    assert os.path.exists(option.config_path)
-    configs = yaml.load(open(option.config_path), Loader=yaml.Loader)
+    env_dict = parse_env()
+    config_path = env_dict["CONFIG_PATH"]
+    assert os.path.exists(config_path)
 
+    option = parse_arguments()
     control = None
     if option.item == "schedule":
         control = ScheduleControl
@@ -30,5 +30,6 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Undefined item: {option.item}")
 
+    configs = parse_config(config_path)
     ctrl = control(configs=configs)
     ctrl.main()

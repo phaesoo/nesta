@@ -20,5 +20,5 @@ services:
     host: localhost
     port: 9000
     interval: 2
-    log_path: "{ROOT_DIR}/log"
+    log_path: "{ROOT_PATH}/log"
     auto_start: true

@@ -285,7 +285,6 @@ class Server(Daemon):
 if __name__ == "__main__":
     env_dict = parse_env()
     config_path = env_dict["CONFIG_PATH"]
-    assert os.path.exists(config_path)
 
     configs = parse_config(config_path)
     configs["env"] = env_dict

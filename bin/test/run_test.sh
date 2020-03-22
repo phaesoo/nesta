@@ -2,6 +2,11 @@
 
 source ./conf.sh
 
-python -m absinthe.server
+# run test server
+python absinthe/server/server.py
 
-pytest -v .
+# run test
+pytest -s .
+
+# terminate test server
+python absinthe/control/control.py server terminate

@@ -6,7 +6,7 @@ class Server(Base):
         super(Server, self).__init__("server", configs)
 
     def _init_parser(self):
-        subparsers = self._parser.add_subparsers(dest="commands")
+        subparsers = self._parser.add_subparsers(dest="command")
         subparsers.required = True
         subparsers.add_parser("resume")
         subparsers.add_parser("stop")

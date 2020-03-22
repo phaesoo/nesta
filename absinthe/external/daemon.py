@@ -51,7 +51,7 @@ class Daemon(ABC):
         si = open(self._stdin, 'r')
         so = open(self._stdout, 'a+')
         se = open(self._stderr, 'a+')
-        os.dup2(si.fileno(), sys.stdin.fileno())
+        #os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
 
@@ -59,6 +59,7 @@ class Daemon(ABC):
         os.remove(self._pidfile)
 
     def start(self):
+        print ("start daemon")
         """
         start the daemon
         """
@@ -86,6 +87,7 @@ class Daemon(ABC):
         self._run()
 
     def stop(self):
+        print ("stop daemon")
         """
         Stop the daemon
         """

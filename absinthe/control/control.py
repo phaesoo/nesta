@@ -3,33 +3,40 @@ import sys
 import socket
 import yaml
 from argparse import ArgumentParser, REMAINDER
-from absinthe.control.controls import *
 from absinthe.configs.util import parse_env, parse_config
+from absinthe.control.controls.server import Server
+from absinthe.control.controls.worker import Worker
+from absinthe.control.controls.schedule import Schedule
 
 
-def parse_arguments():
-    parser = ArgumentParser()
-    parser.add_argument("--item", dest="item",
-                        help="{schedule, server, worker}", required=True)
-    return parser.parse_args(sys.argv[1:3])
+class Control:
+    commands = {
+        "server": Server,
+        "worker": Worker,
+        "schedule": Schedule,
+    }
+    
+    def __init__(self, configs):
+        self._configs = configs
 
+    def main(self, command, argv):
+        assert isinstance(argv, list)
+
+        cmd = self.commands.get(command)
+        if cmd is None:
+            print (f""""
+            commands: {self.commands.keys()}
+            Type 'control <command> --help' for help using a specific command.'
+            """)
+        else:
+            ctrl = cmd(self._configs)
+            ctrl.main(argv)
 
 if __name__ == "__main__":
     env_dict = parse_env()
     config_path = env_dict["CONFIG_PATH"]
     assert os.path.exists(config_path)
 
-    option = parse_arguments()
-    control = None
-    if option.item == "schedule":
-        control = ScheduleControl
-    elif option.item == "server":
-        control = ServerControl
-    elif option.item == "worker":
-        control = WorkerControl
-    else:
-        raise ValueError(f"Undefined item: {option.item}")
-
     configs = parse_config(config_path)
-    ctrl = control(configs=configs)
-    ctrl.main()
+    ctrl = Control(configs=configs)
+    ctrl.main(command=sys.argv[1], argv=sys.argv[2:])

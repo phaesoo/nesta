@@ -1,14 +1,15 @@
 import subprocess
 from absinthe.tasks import app
-from .base_control import BaseControl
+from absinthe.control.controls.base import Base
 
 
-class WorkerControl(BaseControl):
+class Worker(Base):
     def __init__(self, configs):
-        super(WorkerControl, self).__init__("schedule", configs)
+        super(Worker, self).__init__("schedule", configs)
 
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")
+        subparsers.required = True
         subparsers.add_parser("start")
         subparsers.add_parser("restart")
         subparsers.add_parser("terminate")

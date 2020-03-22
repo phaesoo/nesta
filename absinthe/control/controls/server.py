@@ -1,14 +1,13 @@
-import pickle
-from .base_control import BaseControl
-from absinthe.utils.rabbitmq import RabbitMQClient
+from absinthe.control.controls.base import Base
 
 
-class ServerControl(BaseControl):
+class Server(Base):
     def __init__(self, configs):
-        super(ServerControl, self).__init__("server", configs)
+        super(Server, self).__init__("server", configs)
 
     def _init_parser(self):
-        subparsers = self._parser.add_subparsers(dest="command")
+        subparsers = self._parser.add_subparsers(dest="commands")
+        subparsers.required = True
         subparsers.add_parser("resume")
         subparsers.add_parser("stop")
         subparsers.add_parser("terminate")

@@ -5,14 +5,21 @@ from argparse import ArgumentParser
 from absinthe.utils.rabbitmq import RabbitMQClient
 
 
-class BaseControl(ABC):
+class Base(ABC):
     def __init__(self, title, configs):
-        self._argv = sys.argv[4:]
         self._parser = ArgumentParser(
             description=f"Absinthe controller[{title}]")
         self._title = title
         self._configs = configs
 
+    def main(self, argv):
+        assert isinstance(argv, list)
+
+        # parse arguments
+        self._init_parser()
+        parsed = self._parser.parse_args(argv)
+
+        # server health check first
         try:
             recv = self._send("hi")
             if recv == "hello":
@@ -25,6 +32,8 @@ class BaseControl(ABC):
         except Exception as e:
             print (f"Unexpected error: {e}")
             sys.exit(1)
+
+        self._main(parsed)
 
     def _send(self, msg):
         assert isinstance(msg, str)
@@ -54,6 +63,4 @@ class BaseControl(ABC):
             "body": body
         })
 
-    def main(self):
-        self._init_parser()
-        self._main(self._parser.parse_args(self._argv))
+

@@ -4,6 +4,7 @@
 MODULE_PATH=$( cd "$(dirname "$0")" ; pwd )
 cd ${MODULE_PATH}
 cd ..
+cd ..
 
 # export environmental variables
 export ABSINTHE_ROOT_PATH=$(pwd)

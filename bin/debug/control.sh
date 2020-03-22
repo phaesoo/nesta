@@ -2,4 +2,4 @@
 
 source ./conf.sh
 
-python -m absinthe.control --item=$1 $@
+python absinthe/control/control.py $@

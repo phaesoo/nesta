@@ -15,7 +15,7 @@ def parse_env():
         if val is None:
             undefined.append(f"ABSINTHE_{key}")
             continue
-        env_dict["env"][key] = val
+        env_dict[key] = val
 
     if len(undefined):
         raise ValueError(f"Environment variable has not been exported: {undefined}")

@@ -1,12 +1,13 @@
-from .base_control import BaseControl
+from absinthe.control.controls.base import Base
 
 
-class ScheduleControl(BaseControl):
+class Schedule(Base):
     def __init__(self, configs):
-        super(ScheduleControl, self).__init__("schedule", configs)
+        super(Schedule, self).__init__("schedule", configs)
 
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")
+        subparsers.required = True
         insert_parser = subparsers.add_parser("insert")
         insert_parser.add_argument("--date", "-d", dest="date", type=str)
 

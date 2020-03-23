@@ -36,7 +36,6 @@ class Server(Daemon):
 
         super().__init__(
             pidfile=pidfile,
-            stdin=daemon_log,
             stdout=daemon_log,
             stderr=daemon_log
         )

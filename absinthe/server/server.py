@@ -41,7 +41,7 @@ class Server(Daemon):
             stderr=daemon_log
         )
 
-        self._logger = init_logger(log_path, "server")
+        self._logger = init_logger(log_path, "server", configs["services"]["server"]["log_level"])
 
         self._app = get_app(**self._config_common["celery"])
 

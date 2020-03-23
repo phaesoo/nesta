@@ -21,4 +21,5 @@ services:
     port: 9000
     interval: 2
     log_path: "{ROOT_PATH}/log"
+    log_level: "INFO"
     auto_start: true

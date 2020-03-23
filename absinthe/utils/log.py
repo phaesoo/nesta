@@ -5,7 +5,7 @@ from logging import handlers
 
 
 
-def init_logger(filepath, name):
+def init_logger(filepath, name, log_level):
     if not os.path.exists(filepath):
         os.makedirs(filepath)
 
@@ -16,12 +16,12 @@ def init_logger(filepath, name):
     log_handler.suffix = "%Y%m%d"
 
     stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(log_level)
     stream_handler.setFormatter(formatter)
     stream_handler.suffix = "%Y%m%d"
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(log_level)
     logger.addHandler(log_handler)
     logger.addHandler(stream_handler)
 

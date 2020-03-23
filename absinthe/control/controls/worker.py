@@ -1,6 +1,6 @@
 import subprocess
 from absinthe.tasks import app
-from absinthe.control.controls.base import Base
+from absinthe.control.controls.base import Base, Response
 
 
 class Worker(Base):
@@ -15,7 +15,9 @@ class Worker(Base):
         subparsers.add_parser("terminate")
         subparsers.add_parser("ping")
 
-    def _main(self, option):
+    def _execute(self, option):
+        data = None
+        msg = ""
         if option.command == "start":
             run_list = [
                 "bash ~/src/absinthe/bin/run_worker.sh &",
@@ -29,6 +31,12 @@ class Worker(Base):
         elif option.command == "terminate":
             app.control.broadcast("shutdown")
         elif option.command == "ping":
-            print (app.control.ping())
+            data = app.control.ping()
         else:
             raise ValueError(f"Undefined command: {option.command}")
+
+        return Response(
+            exitcode=0,
+            data=data,
+            msg=msg
+        )

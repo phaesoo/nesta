@@ -5,6 +5,15 @@ from argparse import ArgumentParser
 from absinthe.utils.rabbitmq import RabbitMQClient
 
 
+class Response:
+    def __init__(self, exitcode, data=None, msg=""):
+        assert isinstance(exitcode, int)
+        assert isinstance(msg, str)
+        self.exitcode = exitcode
+        self.data = data
+        self.msg = msg
+
+
 class Base(ABC):
     def __init__(self, title, configs):
         self._parser = ArgumentParser(
@@ -12,7 +21,7 @@ class Base(ABC):
         self._title = title
         self._configs = configs
 
-    def main(self, argv):
+    def execute(self, argv):
         assert isinstance(argv, list)
 
         # parse arguments
@@ -27,13 +36,26 @@ class Base(ABC):
             else:
                 raise ValueError(recv)
         except ConnectionRefusedError:
-            print ("Connection refused, server may not running.")
-            sys.exit(1)
+            return Response(
+                exitcode=1,
+                data=None,
+                msg="Connection refused, server may not running."
+            )
         except Exception as e:
-            print (f"Unexpected error: {e}")
-            sys.exit(1)
+            return Response(
+                exitcode=1,
+                data=None,
+                msg=f"Unexpected error: {e}"
+            )
 
-        self._main(parsed)
+        try:
+            self._execute(parsed)
+        except Exception as e:
+            return Response(
+                exitcode=1,
+                data=None,
+                msg=f"Unexpected error: {e}"
+            )
 
     def _send(self, msg):
         assert isinstance(msg, str)
@@ -49,7 +71,7 @@ class Base(ABC):
         pass
 
     @abstractmethod
-    def _main(self, option):
+    def _execute(self, option):
         pass
 
     def _publish(self, body):
@@ -62,5 +84,3 @@ class Base(ABC):
             "title": self._title,
             "body": body
         })
-
-

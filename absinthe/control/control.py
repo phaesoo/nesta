@@ -19,7 +19,7 @@ class Control:
     def __init__(self, configs):
         self._configs = configs
 
-    def main(self, command, argv):
+    def execute(self, command, argv):
         assert isinstance(argv, list)
 
         cmd = self.commands.get(command)
@@ -28,15 +28,13 @@ class Control:
             commands: {self.commands.keys()}
             Type 'control <command> --help' for help using a specific command.'
             """)
-        else:
-            ctrl = cmd(self._configs)
-            ctrl.main(argv)
+            return
+
+        ctrl = cmd(self._configs)
+        return ctrl.execute(argv)
 
 if __name__ == "__main__":
     env_dict = parse_env()
-    config_path = env_dict["CONFIG_PATH"]
-    assert os.path.exists(config_path)
-
-    configs = parse_config(config_path)
+    configs = parse_config(env_dict["CONFIG_PATH"])
     ctrl = Control(configs=configs)
-    ctrl.main(command=sys.argv[1], argv=sys.argv[2:])
+    ctrl.execute(command=sys.argv[1], argv=sys.argv[2:])

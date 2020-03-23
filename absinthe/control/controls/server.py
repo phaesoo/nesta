@@ -1,4 +1,4 @@
-from absinthe.control.controls.base import Base
+from absinthe.control.controls.base import Base, Response
 
 
 class Server(Base):
@@ -14,15 +14,24 @@ class Server(Base):
         subparsers.add_parser("status")
         subparsers.add_parser("ping")
 
-    def _main(self, option):
+    def _execute(self, option):
+        data = None
+        msg = ""
         if option.command == "ping":
-            print (self._send("hi"))
+            msg="Recieved message from server: {}".format(self._send("hi"))
         elif option.command == "status":
-            print ("server status: {}".format(self._send("status")))
+            data = self._send("status")
+            msg="Current server status: {}".format(data)
         elif option.command in ["stop", "resume", "terminate"]:
             self._publish({
                 "command": option.command
             })
-            print (f"Send command to server: {option.command}")
+            msg="Send command to server: {}".format(option.command)
         else:
             raise ValueError(f"Undefined command: {option.command}")
+
+        return Response(
+            exitcode=0,
+            data=None,
+            msg=msg,
+        )

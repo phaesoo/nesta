@@ -1,4 +1,4 @@
-from absinthe.control.controls.base import Base
+from absinthe.control.controls.base import Base, Response
 
 
 class Schedule(Base):
@@ -11,7 +11,7 @@ class Schedule(Base):
         insert_parser = subparsers.add_parser("insert")
         insert_parser.add_argument("--date", "-d", dest="date", type=str)
 
-    def _main(self, option):
+    def _execute(self, option):
         body = {
             "command": option.command
         }
@@ -21,4 +21,9 @@ class Schedule(Base):
             raise ValueError(f"Undefined command: {option.command}")
             
         self._publish(body)
-        
+
+        return Response(
+            exitcode=0,
+            data=None,
+            msg=f"Schedule has been inserted, date: {option.date}",
+        )

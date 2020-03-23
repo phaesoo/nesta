@@ -5,17 +5,17 @@ services:
       port: 5672
       username: test
       password: test
-      virtual_host: absinthe_server
+      virtual_host: nesta_server
       queue: "server"
     mysql:
       host: 0.0.0.0
       port: 3306
       username: test
       password: test
-      db: absinthe
+      db: nesta
     celery:
       backend: rpc://
-      broker: amqp://test:test@localhost/absinthe_worker
+      broker: amqp://test:test@localhost/nesta_worker
   server:
     host: localhost
     port: 9000

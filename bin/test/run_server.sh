@@ -2,4 +2,4 @@
 
 source ./conf.sh || exit 1
 
-python absinthe/server/server.py
+python nesta/server/server.py

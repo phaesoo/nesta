@@ -1,6 +1,6 @@
-CREATE DATABASE absinthe;
+CREATE DATABASE nesta;
 
-use absinthe;
+use nesta;
 
 CREATE TABLE job (
     jid INT PRIMARY KEY,

@@ -5,18 +5,18 @@ import time
 import pickle
 from argparse import ArgumentParser
 from threading import Thread, Lock
-from absinthe.server.define import define
-from absinthe.server import schedule
-from absinthe.external.daemon import Daemon
-from absinthe.tasks.tasks import get_app
-from absinthe.utils.rabbitmq import RabbitMQClient
-from absinthe.utils.mysql import MySQLClient
-from absinthe.utils.log import init_logger
-from absinthe.configs.util import parse_env, parse_config, get_defined_path
+from nesta.server.define import define
+from nesta.server import schedule
+from nesta.external.daemon import Daemon
+from nesta.tasks.tasks import get_app
+from nesta.utils.rabbitmq import RabbitMQClient
+from nesta.utils.mysql import MySQLClient
+from nesta.utils.log import init_logger
+from nesta.configs.util import parse_env, parse_config, get_defined_path
 
 
 def parse_arguments():
-    parser = ArgumentParser("Absinthe server")
+    parser = ArgumentParser("Nesta server")
     parser.add_argument("--daemonize", "-d", dest="daemonize",
                         type=bool, default=True, help="daemonize or not")
     return parser.parse_args()

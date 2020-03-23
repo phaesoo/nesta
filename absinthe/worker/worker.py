@@ -2,8 +2,8 @@ import os
 from celery.bin import worker
 from celery import Celery
 from argparse import ArgumentParser
-from absinthe.tasks.tasks import get_app
-from absinthe.configs.util import parse_env, parse_config
+from nesta.tasks.tasks import get_app
+from nesta.configs.util import parse_env, parse_config
 
 
 def parse_arguments():
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     for server in server_list:
         subprocess.call(
-            f"ssh -f {server} 'bash ~/git/absinthe/bin/run_worker.sh'",
+            f"ssh -f {server} 'bash ~/git/nesta/bin/run_worker.sh'",
             shell=True
         )
 """

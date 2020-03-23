@@ -7,8 +7,8 @@ cd ..
 cd ..
 
 # export environmental variables
-export ABSINTHE_ROOT_PATH=$(pwd)
-export ABSINTHE_CONFIG_PATH=${ABSINTHE_ROOT_PATH}/absinthe/configs/debug.yml
+export NESTA_ROOT_PATH=$(pwd)
+export NESTA_CONFIG_PATH=${NESTA_ROOT_PATH}/nesta/configs/debug.yml
 
 # activate virtual environment
 source .venv/bin/activate

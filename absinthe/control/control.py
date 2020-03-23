@@ -3,10 +3,10 @@ import sys
 import socket
 import yaml
 from argparse import ArgumentParser, REMAINDER
-from absinthe.configs.util import parse_env, parse_config
-from absinthe.control.controls.server import Server
-from absinthe.control.controls.worker import Worker
-from absinthe.control.controls.schedule import Schedule
+from nesta.configs.util import parse_env, parse_config
+from nesta.control.controls.server import Server
+from nesta.control.controls.worker import Worker
+from nesta.control.controls.schedule import Schedule
 
 
 class Control:

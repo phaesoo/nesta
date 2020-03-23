@@ -11,9 +11,9 @@ def parse_env():
     env_dict = {}
     undefined = []
     for key in env_list:
-        val = os.environ.get(f"ABSINTHE_{key}")
+        val = os.environ.get(f"NESTA_{key}")
         if val is None:
-            undefined.append(f"ABSINTHE_{key}")
+            undefined.append(f"NESTA_{key}")
             continue
         env_dict[key] = val
 

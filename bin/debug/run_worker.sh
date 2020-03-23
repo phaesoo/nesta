@@ -2,4 +2,4 @@
 
 source ./conf.sh || exit 1
 
-python -m absinthe.worker
+python -m nesta.worker

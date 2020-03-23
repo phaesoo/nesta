@@ -2,7 +2,7 @@ import sys
 import socket
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
-from absinthe.utils.rabbitmq import RabbitMQClient
+from nesta.utils.rabbitmq import RabbitMQClient
 
 
 class Response:
@@ -17,7 +17,7 @@ class Response:
 class Base(ABC):
     def __init__(self, title, configs):
         self._parser = ArgumentParser(
-            description=f"Absinthe controller[{title}]")
+            description=f"Nesta controller[{title}]")
         self._title = title
         self._configs = configs
 

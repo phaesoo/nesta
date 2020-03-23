@@ -1,6 +1,6 @@
 import subprocess
-from absinthe.tasks import app
-from absinthe.control.controls.base import Base, Response
+from nesta.tasks import app
+from nesta.control.controls.base import Base, Response
 
 
 class Worker(Base):
@@ -20,8 +20,8 @@ class Worker(Base):
         msg = ""
         if option.command == "start":
             run_list = [
-                "bash ~/src/absinthe/bin/run_worker.sh &",
-                f"ssh -f hspark@ec2-3-87-14-67.compute-1.amazonaws.com 'bash ~/git/absinthe/bin/run_worker.sh'",
+                "bash ~/src/nesta/bin/run_worker.sh &",
+                f"ssh -f hspark@ec2-3-87-14-67.compute-1.amazonaws.com 'bash ~/git/nesta/bin/run_worker.sh'",
             ]
             for cmd in run_list:
                 subprocess.call(

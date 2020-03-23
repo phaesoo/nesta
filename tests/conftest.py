@@ -1,6 +1,6 @@
 import pytest
-from absinthe.control.control import Control
-from absinthe.configs.util import parse_env, parse_config
+from nesta.control.control import Control
+from nesta.configs.util import parse_env, parse_config
 
 @pytest.fixture(scope="session")
 def control():

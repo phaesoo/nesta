@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from celery import Celery
 
 
-SCRIPT_PATH="/home/phaesoo/src/absinthe/temp/script"
+SCRIPT_PATH="/home/phaesoo/src/nesta/temp/script"
 
 
 def get_app(backend, broker, **kwargs):

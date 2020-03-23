@@ -1,4 +1,4 @@
-from absinthe.control.controls.base import Base, Response
+from nesta.control.controls.base import Base, Response
 
 
 class Schedule(Base):

@@ -2,10 +2,10 @@ from setuptools import setup
 
 
 setup(
-    name='absinthe',
+    name='nesta',
     version='1.0.0',
     author='tom',
-    packages=['absinthe'],
+    packages=['nesta'],
     include_package_data=True,
     install_requires=[
     ],

@@ -213,7 +213,9 @@ class Server(Daemon):
                 task_id = self._app.send_task("script", [row[1]])
                 self._conn.execute(
                     f"""
-                    update job_schedule set job_status=1, task_id='{task_id}', run_count=run_count+1 where jid={row[0]};
+                    UPDATE job_schedule
+                    SET job_status=1, task_id='{task_id}', run_count=run_count+1 , start_time=now()
+                    WHERE jid={row[0]};
                     """
                 )
             self._conn.commit()

@@ -1,4 +1,4 @@
-from nesta.control.controls.base import Base, Response
+from nesta.control.commands.base import Base, Response
 
 
 class Server(Base):
@@ -32,6 +32,6 @@ class Server(Base):
 
         return Response(
             exitcode=0,
-            data=None,
+            data=data,
             msg=msg,
         )

@@ -9,9 +9,9 @@ from nesta.control.commands.worker import Worker
 from nesta.control.commands.schedule import Schedule
 
 
-class Control:
+class Admin:
     commands = {
-        "server": Server,
+        "submit": Server,
         "worker": Worker,
         "schedule": Schedule,
     }

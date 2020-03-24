@@ -1,6 +1,6 @@
 import subprocess
 from nesta.tasks import app
-from nesta.control.controls.base import Base, Response
+from nesta.control.commands.base import Base, Response
 
 
 class Worker(Base):

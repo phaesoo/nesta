@@ -13,6 +13,12 @@ class Response:
         self.data = data
         self.msg = msg
 
+    def __str__(self):
+        return f"""
+        exitcode: {self.exitcode}
+        data: {self.data}
+        msg: {self.msg}
+        """
 
 class Base(ABC):
     def __init__(self, title, configs):
@@ -49,7 +55,9 @@ class Base(ABC):
             )
 
         try:
-            self._execute(parsed)
+            resp = self._execute(parsed)
+            assert isinstance(resp, Response)
+            return resp
         except Exception as e:
             return Response(
                 exitcode=1,

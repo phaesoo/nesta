@@ -44,9 +44,6 @@ class Server(Daemon):
 
         self._app = get_app(**self._config_common["celery"])
 
-        self._conn = MySQLClient()
-        self._conn.init(**self._config_common["mysql"])
-
         self._interval = self._config_server["interval"]
         self._status = define.STATUS_RUNNING if self._config_server[
             "auto_start"] else define.STATUS_STOPPED
@@ -61,11 +58,13 @@ class Server(Daemon):
         for t in threads:
             t.start()
 
+        self._main()
+        """
         try:
             self._wrap(self._main)
         except Exception as e:
             print (e)
-
+        """
         for t in threads:
             t.join()
 
@@ -109,12 +108,11 @@ class Server(Daemon):
                     client_socket.sendall(self._status.encode())
                 else:
                     self._logger.warn(f"Unknown msg: {msg}")
+                client_socket.close()
             except socket.timeout:
                 pass
             except Exception as e:
                 self._logger.error(f"health_check error: {e}")
-
-        client_socket.close()
         server_socket.close()
 
     def _main(self):
@@ -122,6 +120,9 @@ class Server(Daemon):
         main thread for handling message queues and assigning jobs
         """
         self._logger.debug("main thread has been started")
+
+        conn = MySQLClient()
+        conn.init(**self._config_common["mysql"])
 
         mq_client = RabbitMQClient()
         mq_client.init(**self._config_common["rabbitmq"])
@@ -153,7 +154,7 @@ class Server(Daemon):
             if data:
                 self._logger.debug(data)
                 try:
-                    self._handle_queue(data)
+                    self._handle_queue(conn, data)
                 except Exception as e:
                     self._logger.error(f"Error while _handle_queue: {e}")
                 continue
@@ -163,9 +164,9 @@ class Server(Daemon):
                 continue
 
             # assign jobs
-            self._assign_jobs()
+            self._assign_jobs(conn)
 
-    def _handle_queue(self, data):
+    def _handle_queue(self, conn, data):
         title = data["title"]
         body = data["body"]
 
@@ -189,20 +190,23 @@ class Server(Daemon):
                 date = body["date"]
                 assert isinstance(date, str)
                 try:
-                    schedule.dump_schedule_hist(self._conn)
-                    schedule.generate_schedule(self._conn, date)
-                    self._conn.commit()
+                    schedule.dump_schedule_hist(conn)
+                    schedule.generate_schedule(conn, date)
+                    conn.commit()
                 except Exception as e:
                     self._logger.error(e)
-                    self._conn.rollback()
+                    conn.rollback()
             else:
                 self._logger.warn(f"Undefined {title} command {by}: {cmd}")
         else:
             raise ValueError(f"Undefined title: {title}")
 
-    def _assign_jobs(self):
+    def _assign_jobs(self, conn):
+        # commit for getting up-to-date db status
+        conn.commit()
+
         # assign jobs
-        jobs = schedule.get_assignable_jobs(self._conn)
+        jobs = schedule.get_assignable_jobs(conn)
         if not len(jobs):
             self._logger.debug("There is no assignable jobs")
             return
@@ -211,17 +215,17 @@ class Server(Daemon):
             for row in jobs:
                 self._logger.debug(f"assign job: {row[1]}")
                 task_id = self._app.send_task("script", [row[1]])
-                self._conn.execute(
+                conn.execute(
                     f"""
                     UPDATE job_schedule
                     SET job_status=1, task_id='{task_id}', run_count=run_count+1 , start_time=now()
                     WHERE jid={row[0]};
                     """
                 )
-            self._conn.commit()
+            conn.commit()
         except Exception as e:
             self._logger.error(e)
-            self._conn.rollback()
+            conn.rollback()
 
     def _update_result(self):
         """
@@ -229,10 +233,13 @@ class Server(Daemon):
         """
         self._logger.debug("update_result thread has been started")
 
+        conn = MySQLClient()
+        conn.init(**self._config_common["mysql"])
+
         is_first = True
 
         while True:
-            # imte interval from second loop
+            # time interval from second loop
             if is_first is True:
                 is_first = False
             else:
@@ -245,8 +252,11 @@ class Server(Daemon):
                 self._logger.debug("update_result thread has been stopped")
                 continue
 
+            # commit for getting up-to-date db status
+            conn.commit()
+
             # get finished jobs
-            data = self._conn.fetchall(
+            data = conn.fetchall(
                 """
                 SELECT task_id, jid from job_schedule where task_id IS NOT NULL;
                 """
@@ -259,9 +269,8 @@ class Server(Daemon):
             try:
                 for row in data:
                     result = self._app.AsyncResult(row[0])
-                    print(result.state)
                     if result.state == "PENDING":
-                        self._conn.execute(
+                        conn.execute(
                             f"""
                             UPDATE job_schedule SET job_status=-999, task_id=NULL where jid={row[1]};
                             """
@@ -272,15 +281,15 @@ class Server(Daemon):
                             result_code = 99
                         else:
                             result_code = -result_code
-                        self._conn.execute(
+                        conn.execute(
                             f"""
                             update job_schedule set job_status={result_code}, task_id=NULL where jid={row[1]};
                             """
                         )
-                self._conn.commit()
+                conn.commit()
             except Exception as e:
                 self._logger.error(e)
-                self._conn.rollback()
+                conn.rollback()
 
 
 if __name__ == "__main__":

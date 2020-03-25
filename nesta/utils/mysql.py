@@ -45,7 +45,6 @@ class MySQLClient:
             raise MySQLClientError("Client has not been initialized: init()")
 
     def commit(self):
-        print ("commit")
         self._check_init()
         if self._conn is None:
             self._init_connection()

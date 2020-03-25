@@ -2,6 +2,7 @@ import pytest
 from nesta.control.control import Control
 from nesta.configs.util import parse_env, parse_config
 
+
 @pytest.fixture(scope="session")
 def control():
     env_dict = parse_env()

@@ -20,6 +20,7 @@ class Response:
         msg: {self.msg}
         """
 
+
 class Base(ABC):
     def __init__(self, title, configs):
         self._parser = ArgumentParser(

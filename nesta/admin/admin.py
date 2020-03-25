@@ -36,7 +36,7 @@ class Admin:
 if __name__ == "__main__":
     env_dict = parse_env()
     configs = parse_config(env_dict["CONFIG_PATH"])
-    ctrl = Control(configs=configs)
+    ctrl = Admin(configs=configs)
     resp = ctrl.execute(command=sys.argv[1], argv=sys.argv[2:])
 
     print ("data: {}".format(resp.msg))

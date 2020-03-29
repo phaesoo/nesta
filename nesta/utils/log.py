@@ -1,11 +1,13 @@
 import os
 import sys
 import logging
+import logstash
 from logging import handlers
 
 
 
 def init_logger(filepath, name, log_level):
+    print (log_level)
     if not os.path.exists(filepath):
         os.makedirs(filepath)
 
@@ -20,9 +22,13 @@ def init_logger(filepath, name, log_level):
     stream_handler.setFormatter(formatter)
     stream_handler.suffix = "%Y%m%d"
 
+    ##logstash_handler.setFormatter(formatter)
+    #logstash_handler.suffix = "%Y%m%d"
+
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
     logger.addHandler(log_handler)
-    logger.addHandler(stream_handler)
+    # logger.addHandler(stream_handler)
+    logger.addHandler(logstash.TCPLogstashHandler("localhost", 5000, version=1))
 
     return logger

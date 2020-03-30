@@ -20,7 +20,8 @@ if __name__ == "__main__":
 
     configs = parse_config(config_path)
 
-    app = get_app(**configs["services"]["common"]["celery"])
+    script_path = configs["services"]["worker"]["script_path"]
+    app = get_app(script_path=script_path, **configs["services"]["common"]["celery"])
 
     w = worker.worker(app=app)
     w.run(loglevel="INFO", traceback=True)

@@ -42,7 +42,8 @@ class Server(Daemon):
 
         self._logger = init_logger(log_path, "server", configs["services"]["server"]["log_level"])
 
-        self._app = get_app(**self._config_common["celery"])
+        script_path = configs["services"]["worker"]["script_path"]
+        self._app = get_app(script_path=script_path, **self._config_common["celery"])
 
         self._interval = self._config_server["interval"]
         self._status = define.STATUS_RUNNING if self._config_server[

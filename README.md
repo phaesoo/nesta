@@ -31,3 +31,8 @@
 Undecided
 
 - Worker heartbeat(ping)
+
+# Setup
+
+RabbitMQ (docker)
+- sudo docker run -d --name rabbitmq -p 5672:5672 -p 8080:15672 --restart=unless-stopped -e RABBITMQ_DEFAULT_USER=test -e RABBITMQ_DEFAULT_PASS=test rabbitmq:management

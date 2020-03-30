@@ -21,7 +21,7 @@ services:
     port: 9000
     interval: 5
     log_path: "{ROOT_PATH}/log"
-    log_level: "DEBUG"
+    log_level: "INFO"
     auto_start: true
   worker:
     script_path: /usr/local/bin/nesta-jobs/bin

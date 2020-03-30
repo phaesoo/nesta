@@ -20,6 +20,7 @@ CREATE TABLE `job_schedule` (
     `job_date` DATE,
     `job_status` INT DEFAULT 0,
     `scheduled_time` DATETIME DEFAULT NULL,
+    `assign_time` DATETIME DEFAULT NULL,
     `start_time` DATETIME DEFAULT NULL,
     `end_time` DATETIME DEFAULT NULL,
     `run_count` INT DEFAULT 0,
@@ -34,6 +35,7 @@ CREATE TABLE job_schedule_hist (
     `jid` INT,
     `job_date` DATE,
     `job_status` INT,
+    `assign_time` DATETIME,
     `start_time` DATETIME,
     `end_time` DATETIME,
     `run_count` INT

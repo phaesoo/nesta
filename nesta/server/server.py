@@ -103,6 +103,7 @@ class Server(Daemon):
             try:
                 client_socket, _ = server_socket.accept()
                 msg = client_socket.recv(1024).decode()
+                self._logger.info("Recieve msg from client: {}".format(msg))
                 if msg == "hi":
                     client_socket.sendall("hello".encode())
                 elif msg == "status":
@@ -113,7 +114,7 @@ class Server(Daemon):
             except socket.timeout:
                 pass
             except Exception as e:
-                self._logger.error(f"health_check error: {e}")
+                self._logger.error(f"Unexpected error: {e}")
         server_socket.close()
 
     def _main(self):
@@ -150,10 +151,9 @@ class Server(Daemon):
             else:
                 time.sleep(self._interval)
 
-            # main queue has high priority
             data = mq_client.get(queue)
             if data:
-                self._logger.debug(data)
+                self._logger.info("Recieve queue: {}".format(data))
                 try:
                     self._handle_queue(conn, data)
                 except Exception as e:
@@ -161,7 +161,7 @@ class Server(Daemon):
                 continue
 
             if self._status == define.STATUS_STOPPED:
-                self._logger.debug("Server has been stopped")
+                self._logger.info("Server has been stopped")
                 continue
 
             # assign jobs
@@ -216,12 +216,12 @@ class Server(Daemon):
 
         try:
             for row in jobs:
-                self._logger.debug(f"assign job: {row[1]}")
+                self._logger.info(f"Assign job: {row[1]}")
                 task_id = self._app.send_task("script", [row[1]])
                 conn.execute(
                     f"""
                     UPDATE job_schedule
-                    SET job_status=1, task_id='{task_id}', run_count=run_count+1 , start_time=now()
+                    SET job_status=1, task_id='{task_id}', run_count=run_count+1, assign_time=now()
                     WHERE jid={row[0]};
                     """
                 )
@@ -272,13 +272,9 @@ class Server(Daemon):
             try:
                 for row in data:
                     result = self._app.AsyncResult(row[0])
-                    if result.state == "PENDING":
-                        conn.execute(
-                            f"""
-                            UPDATE job_schedule SET job_status=-999, task_id=NULL where jid={row[1]};
-                            """
-                        )
-                    elif result.ready():
+                    self._logger.info("Result: {}, {}".format(row[1], result.state))
+
+                    if result.ready():
                         result_code = result.get()
                         if result_code == 0:
                             result_code = 99

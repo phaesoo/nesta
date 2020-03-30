@@ -14,14 +14,14 @@ def dump_schedule_hist(conn):
     # dump job_schedule > job_schedule_hist
     data = conn.fetchall(
         """
-        SELECT jid, job_date, job_status, start_time, end_time, run_count
+        SELECT jid, job_date, job_status, assign_time, start_time, end_time, run_count
         FROM job_schedule
         """
     )
 
     conn.executemany(
         """
-        INSERT INTO job_schedule_hist (jid, job_date, job_status, start_time, end_time, run_count)
+        INSERT INTO job_schedule_hist (jid, job_date, job_status, assign_time, start_time, end_time, run_count)
         VALUES (%s, %s, %s, %s, %s, %s)
         """, data
     )

@@ -8,7 +8,7 @@ services:
       virtual_host: nesta_server
       queue: "server"
     mysql:
-      host: 0.0.0.0
+      host: test.cqjkmnxj8jd2.ap-northeast-2.rds.amazonaws.com
       port: 3306
       username: test
       password: test
@@ -19,7 +19,7 @@ services:
   server:
     host: localhost
     port: 9000
-    interval: 2
+    interval: 5
     log_path: "{ROOT_PATH}/log"
     log_level: "DEBUG"
     auto_start: true

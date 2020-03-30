@@ -8,7 +8,7 @@ services:
       virtual_host: nesta_server
       queue: "server"
     mysql:
-      host: 0.0.0.0
+      host: test.cqjkmnxj8jd2.ap-northeast-2.rds.amazonaws.com
       port: 3306
       username: test
       password: test

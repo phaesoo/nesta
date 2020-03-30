@@ -171,6 +171,8 @@ class Server(Daemon):
         title = data["title"]
         body = data["body"]
 
+        self._logger.debug("handle_queue > title: {}, body: {}".format(title, body))
+
         if title == "server":
             cmd = body.get("command", None)
             by = body.get("by", "undefined")
@@ -195,10 +197,10 @@ class Server(Daemon):
                     schedule.generate_schedule(conn, date)
                     conn.commit()
                 except Exception as e:
-                    self._logger.error(e)
                     conn.rollback()
+                    self._logger.error("Error while generating schedule: {}".format(e))
             else:
-                self._logger.warn(f"Undefined {title} command {by}: {cmd}")
+                self._logger.warn(f"Undefined {title} command: {cmd}")
         else:
             raise ValueError(f"Undefined title: {title}")
 

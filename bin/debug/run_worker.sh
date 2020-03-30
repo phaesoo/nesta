@@ -1,5 +1,6 @@
 #!/bin/bash
 
-source ./conf.sh || exit 1
+source `dirname $0`/conf.sh || exit 1
 
-python -m nesta.worker
+python nesta/worker/worker.py
+

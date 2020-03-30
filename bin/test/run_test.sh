@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./conf.sh || exit 1
+source `dirname $0`/conf.sh || exit 1
 
 # run test server
 python nesta/server/server.py || exit 1

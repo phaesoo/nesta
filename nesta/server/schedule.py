@@ -22,7 +22,7 @@ def dump_schedule_hist(conn):
     conn.executemany(
         """
         INSERT INTO job_schedule_hist (jid, job_date, job_status, assign_time, start_time, end_time, run_count)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, data
     )
 

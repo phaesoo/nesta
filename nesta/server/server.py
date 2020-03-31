@@ -261,7 +261,7 @@ class Server(Daemon):
             # get finished jobs
             data = conn.fetchall(
                 """
-                SELECT task_id, jid from job_schedule where task_id IS NOT NULL;
+                SELECT jid, task_id, job_status from job_schedule where task_id IS NOT NULL;
                 """
             )
             if not len(data):
@@ -269,26 +269,61 @@ class Server(Daemon):
                 continue
 
             # update job_status and task_id=NULL
-            try:
-                for row in data:
-                    result = self._app.AsyncResult(row[0])
-                    self._logger.info("Result: {}, {}".format(row[1], result.state))
+            sql_list = list()
+            for row in data:
+                job_id = row[0]
+                task_id = row[1]
+                job_status = row[2]
 
-                    if result.ready():
+                result = self._app.AsyncResult(task_id)
+                state = result.state
+                self._logger.info("Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status))
+
+                if result.ready():
+                    if state == "REVOKED":
+                        sql_list.append("""
+                            update job_schedule set job_status=-9, task_id=NULL where jid={};
+                            """.format(job_id)
+                            )
+                    elif state in ["STARTED", "SUCCESS"]:
                         result_code = result.get()
                         if result_code == 0:
                             result_code = 99
                         else:
                             result_code = -result_code
-                        conn.execute(
-                            f"""
-                            update job_schedule set job_status={result_code}, task_id=NULL where jid={row[1]};
-                            """
+
+                        sql_list.append("""
+                            update job_schedule set job_status={}, task_id=NULL where jid={};
+                            """.format(result_code, job_id)
+                            )
+                    else:
+                        self._logger.error("Unexpected ready status: {}".format(state))
+                elif state == "STARTED":
+                    if job_status == 1:
+                        sql_list.append("""
+                            update job_schedule set job_status=2 where jid={};
+                            """.format(job_id)
+                            )
+                elif state == "PENDING":
+                    continue
+                elif state == "FAILED":
+                    sql_list.append("""
+                        update job_schedule set job_status=-999 and task_id=NULL where jid={};
+                        """.format(job_id)
                         )
-                conn.commit()
-            except Exception as e:
-                self._logger.error(e)
-                conn.rollback()
+                else:
+                    self._logger.error("Unexpected status: {}".format(state))
+
+            # nothing to proceed
+            if len(sql_list):
+                self._logger.info("sql_list: {}".format(sql_list))
+                try:
+                    for sql in sql_list:
+                        conn.execute(sql)
+                    conn.commit()
+                except Exception as e:
+                    self._logger.error(e)
+                    conn.rollback()
 
 
 if __name__ == "__main__":

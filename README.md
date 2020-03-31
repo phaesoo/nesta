@@ -17,7 +17,9 @@
 - [x] Daemonize server process
 - [x] Logging
 - [ ] Testing
-- [ ] Notification
+- [ ] Notification (email.. etc)
+- [ ] External controller (telegram)
+- [ ] Task reponse object
 
 # Server
 

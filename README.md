@@ -38,3 +38,8 @@ Undecided
 
 RabbitMQ (docker)
 - sudo docker run -d --name rabbitmq -p 5672:5672 -p 8080:15672 --restart=unless-stopped -e RABBITMQ_DEFAULT_USER=test -e RABBITMQ_DEFAULT_PASS=test rabbitmq:management
+
+
+# Note
+
+- rsync -rvz ./ --include=*.py  --exclude=.venv/ --exclude=.git/ --exclude=*.log --exclude=*.pid hspark@aws_test:/usr/local/bin/nesta/

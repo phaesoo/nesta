@@ -328,9 +328,7 @@ class Server(Daemon):
 
 if __name__ == "__main__":
     env_dict = parse_env()
-    config_path = env_dict["CONFIG_PATH"]
-
-    configs = parse_config(config_path)
+    configs = parse_config(env_dict["MODE"])
     configs["env"] = env_dict
 
     option = parse_arguments()

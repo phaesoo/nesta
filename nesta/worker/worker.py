@@ -13,12 +13,10 @@ def parse_arguments():
 
 if __name__ == "__main__":
     env_dict = parse_env()
-    config_path = env_dict["CONFIG_PATH"]
-    assert os.path.exists(config_path)
 
     options = parse_arguments()
 
-    configs = parse_config(config_path)
+    configs = parse_config(env_dict["MODE"])
 
     script_path = configs["services"]["worker"]["script_path"]
     app = get_app(script_path=script_path, **configs["services"]["common"]["celery"])

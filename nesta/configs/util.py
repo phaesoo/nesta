@@ -1,11 +1,12 @@
 import os
+import boto3
 import yaml
 
 def parse_env():
     # from environment variables
     env_list = [
         "ROOT_PATH",
-        "CONFIG_PATH",
+        "MODE",
         ]
 
     env_dict = {}
@@ -22,11 +23,12 @@ def parse_env():
 
     return env_dict
 
+
 def parse_config(filename):
-    if not os.path.exists(filename):
-        raise FileNotFoundError(filename)
-    # read from yaml
-    return yaml.load(open(filename), Loader=yaml.Loader)
+    bucket = "nesta-config"
+    s3 = boto3.client("s3")
+    response = s3.get_object(Bucket=bucket, Key="debug.yml")
+    return yaml.safe_load(response["Body"])
 
 
 def get_defined_path(path, config):

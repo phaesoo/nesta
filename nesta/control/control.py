@@ -51,7 +51,7 @@ class Control:
 
 if __name__ == "__main__":
     env_dict = parse_env()
-    configs = parse_config(env_dict["CONFIG_PATH"])
+    configs = parse_config(env_dict["MODE"])
     ctrl = Control(configs=configs)
 
     argv = sys.argv

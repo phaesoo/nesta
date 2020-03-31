@@ -8,7 +8,7 @@ cd ..
 
 # export environmental variables
 export NESTA_ROOT_PATH=$(pwd)
-export NESTA_CONFIG_PATH=$(pwd)/tests/configs/test.yml
+export NESTA_MODE=test
 
 # activate virtual environment
 source .venv/bin/activate

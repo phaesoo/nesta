@@ -17,9 +17,7 @@ if __name__ == "__main__":
     options = parse_arguments()
 
     configs = parse_config(env_dict["MODE"])
-
-    script_path = configs["services"]["worker"]["script_path"]
-    app = get_app(script_path=script_path, **configs["services"]["common"]["celery"])
+    app = get_app(**configs)
 
     w = worker.worker(app=app)
     w.run(loglevel="INFO", traceback=True)

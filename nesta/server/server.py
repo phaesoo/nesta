@@ -43,7 +43,7 @@ class Server(Daemon):
         self._logger = init_logger(log_path, "server", configs["services"]["server"]["log_level"])
 
         script_path = configs["services"]["worker"]["script_path"]
-        self._app = get_app(script_path=script_path, **self._config_common["celery"])
+        self._app = get_app(**configs)
 
         self._interval = self._config_server["interval"]
         self._status = define.STATUS_RUNNING if self._config_server[
@@ -304,6 +304,7 @@ class Server(Daemon):
                             update job_schedule set job_status=2 where jid={};
                             """.format(job_id)
                             )
+                    task_id = self._app.send_task("notice", [row[1]])
                 elif state == "PENDING":
                     continue
                 elif state == "FAILED":

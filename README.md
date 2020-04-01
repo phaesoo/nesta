@@ -20,6 +20,9 @@
 - [ ] Notification (email.. etc)
 - [ ] External controller (telegram)
 - [ ] Task reponse object
+- [ ] Add region column on job db
+- [ ] Exchange trading date information from external library
+- [ ] Prepare for safe insert logic (schedule insert command)
 
 # Server
 

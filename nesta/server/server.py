@@ -71,6 +71,7 @@ class Server(Daemon):
         for t in threads:
             t.join()
 
+        self._notice.send_task("critical", ["Server has been terminated"])
         self._logger.info("Server has been terminated")
 
     def _set_status(self, status):

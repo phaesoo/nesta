@@ -1,3 +1,4 @@
+import datetime
 from nesta.control.commands.base import Base, Response
 
 
@@ -9,14 +10,17 @@ class Schedule(Base):
         subparsers = self._parser.add_subparsers(dest="command")
         subparsers.required = True
         insert_parser = subparsers.add_parser("insert")
-        insert_parser.add_argument("--date", "-d", dest="date", type=str)
+        insert_parser.add_argument("--date", "-d", dest="date", type=str, required=True, help="'today', 'yyyymmdd'")
 
     def _execute(self, option):
         body = {
             "command": option.command
         }
         if option.command == "insert":
-            body["date"] = option.date
+            if option.date == "today":
+                body["date"] = datetime.date.today().strftime('%Y%m%d')
+            else:
+                body["date"] = option.date
         else:
             raise ValueError(f"Undefined command: {option.command}")
             

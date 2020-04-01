@@ -1,6 +1,6 @@
 from celery.bin import worker
 from argparse import ArgumentParser
-from nesta.tasks.tasks import get_worker
+from nesta.tasks.notice import get_notice
 from nesta.configs.util import parse_env, parse_config
 
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     options = parse_arguments()
 
     configs = parse_config(env_dict["MODE"])
-    app = get_worker(**configs)
+    app = get_notice(**configs)
 
     w = worker.worker(app=app)
     w.run(loglevel="INFO", traceback=True)

@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from celery import Celery
 
 
-def get_app(**configs):
+def get_worker(**configs):
     broker = configs["services"]["common"]["celery"]["broker"] + "/nesta_worker"
     backend = configs["services"]["common"]["celery"]["backend"]
 

@@ -8,7 +8,8 @@ from threading import Thread, Lock
 from nesta.server.define import define
 from nesta.server import schedule
 from nesta.external.daemon import Daemon
-from nesta.tasks.tasks import get_app
+from nesta.tasks.tasks import get_worker
+from nesta.tasks.notice import get_notice
 from nesta.utils.rabbitmq import RabbitMQClient
 from nesta.utils.mysql import MySQLClient
 from nesta.utils.log import init_logger
@@ -42,8 +43,8 @@ class Server(Daemon):
 
         self._logger = init_logger(log_path, "server", configs["services"]["server"]["log_level"])
 
-        script_path = configs["services"]["worker"]["script_path"]
-        self._app = get_app(**configs)
+        self._worker = get_worker(**configs)
+        self._notice = get_notice(**configs)
 
         self._interval = self._config_server["interval"]
         self._status = define.STATUS_RUNNING if self._config_server[
@@ -53,6 +54,7 @@ class Server(Daemon):
 
     def _run(self):
         self._logger.info("Server has been started")
+        self._notice.send_task("info", ["Server has been started"])
         threads = [Thread(target=self._wrap, args=[func])
                    for func in [self._communicate, self._update_result]]
 
@@ -80,7 +82,8 @@ class Server(Daemon):
             func(*args, **kwargs)
         except Exception as e:
             self._status = define.STATUS_TERMINATED
-            self._logger.critical(f"Unexpected error. terminate server :{e}")
+            self._logger.critical(f"Unexpected error, start to terminate :{e}")
+            self._notice.send_task("critical", ["Unexpected error, start to terminate: {}".format(e)])
 
     def _communicate(self):
         """
@@ -172,6 +175,7 @@ class Server(Daemon):
         body = data["body"]
 
         self._logger.debug("handle_queue > title: {}, body: {}".format(title, body))
+        self._notice.send_task("info", ["handle_queue > title: {}, body: {}".format(title, body)])
 
         if title == "server":
             cmd = body.get("command", None)
@@ -217,7 +221,7 @@ class Server(Daemon):
         try:
             for row in jobs:
                 self._logger.info(f"Assign job: {row[1]}")
-                task_id = self._app.send_task("script", [row[1]])
+                task_id = self._worker.send_task("script", [row[1]])
                 conn.execute(
                     f"""
                     UPDATE job_schedule
@@ -229,6 +233,7 @@ class Server(Daemon):
         except Exception as e:
             self._logger.error(e)
             conn.rollback()
+            self._notice.send_task("error", ["Error while assign_jobs: {}".format(e)])
 
     def _update_result(self):
         """
@@ -275,7 +280,7 @@ class Server(Daemon):
                 task_id = row[1]
                 job_status = row[2]
 
-                result = self._app.AsyncResult(task_id)
+                result = self._worker.AsyncResult(task_id)
                 state = result.state
                 self._logger.info("Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status))
 
@@ -288,8 +293,10 @@ class Server(Daemon):
                     elif state in ["STARTED", "SUCCESS"]:
                         result_code = result.get()
                         if result_code == 0:
+                            self._notice.send_task("info", ["Job finished: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
                             result_code = 99
                         else:
+                            self._notice.send_task("error", ["Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
                             result_code = -result_code
 
                         sql_list.append("""
@@ -304,16 +311,18 @@ class Server(Daemon):
                             update job_schedule set job_status=2 where jid={};
                             """.format(job_id)
                             )
-                    task_id = self._app.send_task("notice", [row[1]])
+                    task_id = self._worker.send_task("script", [row[1]])
                 elif state == "PENDING":
                     continue
                 elif state == "FAILED":
+                    self._notice.send_task("critical", ["Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
                     sql_list.append("""
                         update job_schedule set job_status=-999 and task_id=NULL where jid={};
                         """.format(job_id)
                         )
                 else:
                     self._logger.error("Unexpected status: {}".format(state))
+                    self._notice.send_task("critical", ["Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
 
             # nothing to proceed
             if len(sql_list):

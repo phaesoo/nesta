@@ -3,6 +3,7 @@ import logging
 import socket
 import time
 import pickle
+import psutil
 from argparse import ArgumentParser
 from threading import Thread, Lock
 from nesta.server.define import define
@@ -129,6 +130,20 @@ class Server(Daemon):
                     client_socket.sendall("hello".encode())
                 elif msg == "status":
                     client_socket.sendall(self._status.encode())
+                elif msg == "summary":
+                    self._logger.info("Send summary")
+                    data = "status: {}, cpu: {}%, memory: {}%".format(
+                        self._status,
+                        psutil.cpu_percent(),
+                        psutil.virtual_memory().percent
+                        )
+                    self._notice.send_task(
+                        "notice",
+                        kwargs={
+                            "level": "INFO",
+                            "msg": data
+                        })
+                    client_socket.sendall(data.encode())
                 else:
                     self._logger.warn(f"Unknown msg: {msg}")
                 client_socket.close()

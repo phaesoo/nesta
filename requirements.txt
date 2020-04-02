@@ -24,6 +24,7 @@ pandas==1.0.1
 pika==1.1.0
 pkg-resources==0.0.0
 pluggy==0.13.1
+psutil==5.7.0
 py==1.8.1
 pyasn1==0.4.8
 pycodestyle==2.5.0

@@ -13,6 +13,8 @@ class Server(Base):
         subparsers.add_parser("terminate")
         subparsers.add_parser("status")
         subparsers.add_parser("ping")
+        subparsers.add_parser("summary")
+
 
     def _execute(self, option):
         data = None
@@ -22,13 +24,16 @@ class Server(Base):
         elif option.command == "status":
             data = self._send("status")
             msg="Current server status: {}".format(data)
+        elif option.command == "summary":
+            data = self._send("summary")
+            msg="[Summary]\n{}".format(data)
         elif option.command in ["stop", "resume", "terminate"]:
             self._publish({
                 "command": option.command
             })
             msg="Send command to server: {}".format(option.command)
         else:
-            raise ValueError(f"Undefined command: {option.command}")
+            raise ValueError("Undefined command: {}".format(option.command))
 
         return Response(
             exitcode=0,

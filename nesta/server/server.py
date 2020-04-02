@@ -30,7 +30,8 @@ class Server(Daemon):
         self._config_common = configs["services"]["common"]
         self._config_server = configs["services"]["server"]
 
-        log_path = get_defined_path(configs["services"]["server"]["log_path"], configs["env"])
+        log_path = get_defined_path(
+            configs["services"]["server"]["log_path"], configs["env"])
 
         pidfile = os.path.join(log_path, "server.pid")
         daemon_log = os.path.join(log_path, "daemon.log")
@@ -41,7 +42,8 @@ class Server(Daemon):
             stderr=daemon_log
         )
 
-        self._logger = init_logger(log_path, "server", configs["services"]["server"]["log_level"])
+        self._logger = init_logger(
+            log_path, "server", configs["services"]["server"]["log_level"])
 
         self._worker = get_worker(**configs)
         self._notice = get_notice(**configs)
@@ -54,7 +56,12 @@ class Server(Daemon):
 
     def _run(self):
         self._logger.info("Server has been started")
-        self._notice.send_task("info", ["Server has been started"])
+        self._notice.send_task(
+            "notice",
+            kwargs={
+                "level": "INFO",
+                "msg": "Server has been started"
+            })
         threads = [Thread(target=self._wrap, args=[func])
                    for func in [self._communicate, self._update_result]]
 
@@ -71,7 +78,12 @@ class Server(Daemon):
         for t in threads:
             t.join()
 
-        self._notice.send_task("critical", ["Server has been terminated"])
+        self._notice.send_task(
+            "notice", 
+            kwargs={
+                "level": "CRITICAL",
+                "msg": "Server has been terminated"
+            })
         self._logger.info("Server has been terminated")
 
     def _set_status(self, status):
@@ -84,7 +96,12 @@ class Server(Daemon):
         except Exception as e:
             self._status = define.STATUS_TERMINATED
             self._logger.critical(f"Unexpected error, start to terminate :{e}")
-            self._notice.send_task("critical", ["Unexpected error, start to terminate: {}".format(e)])
+            self._notice.send_task(
+                "notice",
+                kwargs={
+                    "level": "CRITICAL",
+                    "msg" : "Unexpected error, start to terminate: {}".format(e)
+                })
 
     def _communicate(self):
         """
@@ -175,8 +192,14 @@ class Server(Daemon):
         title = data["title"]
         body = data["body"]
 
-        self._logger.debug("handle_queue > title: {}, body: {}".format(title, body))
-        self._notice.send_task("info", ["handle_queue > title: {}, body: {}".format(title, body)])
+        self._logger.debug(
+            "handle_queue > title: {}, body: {}".format(title, body))
+        self._notice.send_task(
+            "notice", 
+            kwargs={
+                "level": "INFO",
+                "msg": "handle_queue > title: {}, body: {}".format(title, body)}
+                )
 
         if title == "server":
             cmd = body.get("command", None)
@@ -203,7 +226,8 @@ class Server(Daemon):
                     conn.commit()
                 except Exception as e:
                     conn.rollback()
-                    self._logger.error("Error while generating schedule: {}".format(e))
+                    self._logger.error(
+                        "Error while generating schedule: {}".format(e))
             else:
                 self._logger.warn(f"Undefined {title} command: {cmd}")
         else:
@@ -234,7 +258,12 @@ class Server(Daemon):
         except Exception as e:
             self._logger.error(e)
             conn.rollback()
-            self._notice.send_task("error", ["Error while assign_jobs: {}".format(e)])
+            self._notice.send_task(
+                "notice",
+                kwargs={
+                    "level": "ERROR",
+                    "msg": "Error while assign_jobs: {}".format(e)
+                })
 
     def _update_result(self):
         """
@@ -283,47 +312,84 @@ class Server(Daemon):
 
                 result = self._worker.AsyncResult(task_id)
                 state = result.state
-                self._logger.info("Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status))
+                self._logger.info("Result: state({}), jid({}), task_id({}), job_status({})".format(
+                    state, job_id, task_id, job_status))
 
                 if result.ready():
                     if state == "REVOKED":
                         sql_list.append("""
                             update job_schedule set job_status=-9, task_id=NULL where jid={};
                             """.format(job_id)
-                            )
+                        )
                     elif state in ["STARTED", "SUCCESS"]:
                         result_code = result.get()
                         if result_code == 0:
-                            self._notice.send_task("info", ["Job finished: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
+                            self._notice.send_task(
+                                "notice",
+                                kwargs={
+                                    "level": "INFO",
+                                    "msg": "Job finished: state({}), jid({}), task_id({}), job_status({})".format(
+                                state, job_id, task_id, job_status)
+                                })
                             result_code = 99
                         else:
-                            self._notice.send_task("error", ["Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
+                            self._notice.send_task(
+                                "notice",
+                                kwargs={
+                                    "level": "ERROR", 
+                                    "msg": "Result: state({}), jid({}), task_id({}), job_status({})".format(
+                                state, job_id, task_id, job_status)
+                                })
                             result_code = -result_code
 
                         sql_list.append("""
                             update job_schedule set job_status={}, task_id=NULL where jid={};
                             """.format(result_code, job_id)
-                            )
+                        )
+                    elif state == "FAILURE":
+                        self._notice.send_task(
+                            "notice",
+                            kwargs={
+                                "level": "CRITICAL", 
+                                "msg": "Result: state({}), jid({}), task_id({}), job_status({})".format(
+                            state, job_id, task_id, job_status)
+                            })
+                        sql_list.append("""
+                            update job_schedule set job_status=-999 and task_id=NULL where jid={};
+                            """.format(job_id)
+                        )
                     else:
-                        self._logger.error("Unexpected ready status: {}".format(state))
+                        self._logger.error(
+                            "Unexpected ready status: {}".format(state))
                 elif state == "STARTED":
                     if job_status == 1:
                         sql_list.append("""
                             update job_schedule set job_status=2 where jid={};
                             """.format(job_id)
-                            )
-                    task_id = self._worker.send_task("script", [row[1]])
+                        )
                 elif state == "PENDING":
                     continue
-                elif state == "FAILED":
-                    self._notice.send_task("critical", ["Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
+                elif state == "FAILURE":
+                    self._notice.send_task(
+                        "notice",
+                        kwargs={
+                            "level": "CRITICAL", 
+                            "msg": "Result: state({}), jid({}), task_id({}), job_status({})".format(
+                        state, job_id, task_id, job_status)
+                        })
                     sql_list.append("""
                         update job_schedule set job_status=-999 and task_id=NULL where jid={};
                         """.format(job_id)
-                        )
+                    )
                 else:
                     self._logger.error("Unexpected status: {}".format(state))
-                    self._notice.send_task("critical", ["Result: state({}), jid({}), task_id({}), job_status({})".format(state, job_id, task_id, job_status)])
+                    self._notice.send_task(
+                        "notice",
+                        kwargs={
+                            "level": "CRITICAL",
+                            "msg": "Result: state({}), jid({}), task_id({}), job_status({})".format(
+                        state, job_id, task_id, job_status)
+                        })
 
             # nothing to proceed
             if len(sql_list):

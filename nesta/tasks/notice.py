@@ -8,6 +8,8 @@ from celery import Celery
 
 
 def get_notice(**configs):
+    assert isinstance(configs, dict)
+
     token = configs["services"]["common"]["telegram"]["token"]
     chat_id = configs["services"]["common"]["telegram"]["chat_id"]
 
@@ -15,22 +17,14 @@ def get_notice(**configs):
 
     app = Celery("notice", broker=broker)
 
-    @app.task(name="info")
-    def info(msg):
+    @app.task(name="notice")
+    def notice(level, msg):
+        if level not in ["INFO", "ERROR", "CRITICAL"]:
+            raise ValueError("Undefined level: {}".format(level))
+        assert isinstance(msg, str)
+        assert len(msg)
         assert isinstance(msg, str)
         bot = telegram.Bot(token=token)
-        bot.sendMessage(chat_id=chat_id, text="[INFO] "+msg)
-
-    @app.task(name="error")
-    def error(msg):
-        assert isinstance(msg, str)
-        bot = telegram.Bot(token=token)
-        bot.sendMessage(chat_id=chat_id, text="[ERROR] "+msg)
-
-    @app.task(name="critical")
-    def critical(msg):
-        assert isinstance(msg, str)
-        bot = telegram.Bot(token=token)
-        bot.sendMessage(chat_id=chat_id, text="[CRITICAL] "+msg)
+        bot.sendMessage(chat_id=chat_id, text="[{}] {}".format(level, msg))
 
     return app

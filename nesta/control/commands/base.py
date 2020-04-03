@@ -71,6 +71,7 @@ class Base(ABC):
         # server health check
         server_config = self._configs["services"]["server"]
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.settimeout(3)
         client_socket.connect((server_config["host"], server_config["port"]))
         client_socket.sendall(msg.encode())
         return client_socket.recv(1024).decode()

@@ -14,7 +14,7 @@ from nesta.tasks.notice import get_notice
 from nesta.utils.rabbitmq import RabbitMQClient
 from nesta.utils.mysql import MySQLClient
 from nesta.utils.log import init_logger
-from nesta.configs.util import parse_env, parse_config, get_defined_path
+from nesta.configs.util import parse_env, parse_config
 
 
 def parse_arguments():
@@ -28,23 +28,23 @@ class Server(Daemon):
     def __init__(self, configs):
         assert isinstance(configs, dict)
 
+        self._confgs = configs
+
         self._config_common = configs["services"]["common"]
         self._config_server = configs["services"]["server"]
 
-        log_path = get_defined_path(
-            configs["services"]["server"]["log_path"], configs["env"])
-
-        pidfile = os.path.join(log_path, "server.pid")
-        daemon_log = os.path.join(log_path, "daemon.log")
-
+        logfile = self._confgs["services"]["server"]["logfile"]
         super().__init__(
-            pidfile=pidfile,
-            stdout=daemon_log,
-            stderr=daemon_log
+            pidfile=self._confgs["services"]["server"]["pidfile"],
+            stdout=logfile,
+            stderr=logfile
         )
 
         self._logger = init_logger(
-            log_path, "server", configs["services"]["server"]["log_level"])
+            name="server",
+            logfile=logfile,
+            loglevel=configs["services"]["server"]["loglevel"]
+        )
 
         self._worker = get_worker(**configs)
         self._notice = get_notice(**configs)
@@ -132,10 +132,12 @@ class Server(Daemon):
                     client_socket.sendall(self._status.encode())
                 elif msg == "summary":
                     self._logger.info("Send summary")
-                    data = "status: {}, cpu: {}%, memory: {}%".format(
+                    cpu_count = psutil.cpu_count()
+                    data = "status: {}, cpu: {}(%), memory: {}(%), loadavg: {}(%)".format(
                         self._status,
                         psutil.cpu_percent(),
-                        psutil.virtual_memory().percent
+                        psutil.virtual_memory().percent,
+                        "/".join(["{:.0f}".format(x/cpu_count*100) for x in psutil.getloadavg()])
                         )
                     self._notice.send_task(
                         "notice",
@@ -346,7 +348,7 @@ class Server(Daemon):
                                     "msg": "Job finished: state({}), jid({}), task_id({}), job_status({})".format(
                                 state, job_id, task_id, job_status)
                                 })
-                            result_code = 99
+                            job_status = 99
                         else:
                             self._notice.send_task(
                                 "notice",
@@ -355,11 +357,11 @@ class Server(Daemon):
                                     "msg": "Result: state({}), jid({}), task_id({}), job_status({})".format(
                                 state, job_id, task_id, job_status)
                                 })
-                            result_code = -result_code
+                            job_status = -result_code
 
                         sql_list.append("""
                             update job_schedule set job_status={}, task_id=NULL where jid={};
-                            """.format(result_code, job_id)
+                            """.format(job_status, job_id)
                         )
                     elif state == "FAILURE":
                         self._notice.send_task(

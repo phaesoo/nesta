@@ -45,4 +45,4 @@ RabbitMQ (docker)
 
 # Note
 
-- rsync -rvz ./ --include=*.py  --exclude=.venv/ --exclude=.git/ --exclude=*.log --exclude=*.pid hspark@aws_test:/usr/local/bin/nesta/
+- rsync -rvz ~/src/nesta/* --include=*.py  --exclude=.venv/ --exclude=.git/ --exclude=*.log --exclude=*.pid hspark@aws_test:/usr/local/bin/nesta/

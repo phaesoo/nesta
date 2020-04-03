@@ -1,11 +1,12 @@
 import subprocess
-from nesta.tasks import app
+from nesta.tasks.tasks import get_worker
 from nesta.control.commands.base import Base, Response
 
 
 class Worker(Base):
     def __init__(self, configs):
         super(Worker, self).__init__("schedule", configs)
+        self._worker = get_worker(**configs)
 
     def _init_parser(self):
         subparsers = self._parser.add_subparsers(dest="command")
@@ -29,9 +30,9 @@ class Worker(Base):
                     shell=True
                 )
         elif option.command == "terminate":
-            app.control.broadcast("shutdown")
+            self._worker.control.broadcast("shutdown")
         elif option.command == "ping":
-            data = app.control.ping()
+            data = self._worker.control.ping()
         else:
             raise ValueError(f"Undefined command: {option.command}")
 

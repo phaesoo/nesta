@@ -30,6 +30,5 @@ def parse_config(filename):
     response = s3.get_object(Bucket=bucket, Key="debug.yml")
     return yaml.safe_load(response["Body"])
 
-
 def get_defined_path(path, config):
     return path.format(**config)

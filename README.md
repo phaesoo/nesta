@@ -1,5 +1,6 @@
 # Nesta
 
+Task scheduler with dependency management
 
 # Core concepts
 
